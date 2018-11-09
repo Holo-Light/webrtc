@@ -50,7 +50,6 @@ class Clock {
 
   // Returns an instance of the real-time system clock implementation.
   static Clock* GetRealTimeClock();
-
 };
 
 class SimulatedClock : public Clock {

@@ -123,7 +123,6 @@ class Thread;
 namespace cricket {
 class WebRtcVideoDecoderFactory;
 class WebRtcVideoEncoderFactory;
-class ChannelManager;
 }  // namespace cricket
 
 namespace webrtc {

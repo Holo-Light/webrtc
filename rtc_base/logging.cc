@@ -16,11 +16,6 @@
 #undef ERROR  // wingdi.h
 #endif
 
-#if defined(WINUWP)
-#include <stdlib.h>
-#include "rtc_base/win32.h"
-#endif // defined(WINUWP)
-
 #if defined(WEBRTC_MAC) && !defined(WEBRTC_IOS)
 #include <CoreServices/CoreServices.h>
 #elif defined(WEBRTC_ANDROID)
@@ -333,7 +328,7 @@ void LogMessage::ConfigureLogging(const char* params) {
     if (!AttachConsole(ATTACH_PARENT_PROCESS))
       ::AllocConsole();
   }
-#endif  // WEBRTC_WIN
+#endif  // defined(WEBRTC_WIN) && !defined(WINUWP)
 
   LogToDebug(debug_level);
 }
@@ -393,7 +388,7 @@ void LogMessage::OutputToDebug(const std::string& str,
                   &written, 0);
     }
   }
-#endif  // WEBRTC_WIN
+#endif  // defined(WEBRTC_WIN)
 
 #if defined(WEBRTC_ANDROID)
   // Android's logging facility uses severity to log messages but we

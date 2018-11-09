@@ -30,12 +30,6 @@
 #define GET_CURRENT_DIR getcwd
 #endif
 
-#ifdef WINUWP
-#include <objbase.h>
-
-#include "rtc_base/pathutils.h"
-#endif // WINUWP
-
 #include <sys/stat.h>  // To check for directory existence.
 #ifndef S_ISDIR        // Not defined in stat.h on Windows.
 #define S_ISDIR(mode) (((mode)&S_IFMT) == S_IFDIR)
@@ -71,9 +65,6 @@ const char* kPathDelimiter = "/";
 
 #ifdef WEBRTC_ANDROID
 const char* kRootDirName = "/sdcard/chromium_tests_root/";
-#elif WINUWP
-const char* kProjectRootFileName = "";
-const char* kFallbackPath = "./";
 #else
 #if !defined(WEBRTC_IOS)
 const char* kOutputDirName = "out";
@@ -141,44 +132,46 @@ std::string WorkingDir() {
 #else  // WEBRTC_ANDROID
 
 std::string ProjectRootPath() {
-#if defined(WEBRTC_IOS)
+
+// NOTE: (rr) When this conflicts with the newest version, take the WebRTC
+// version as official as this version is a snapshot from a later
+// instance of WebRTC which is compatible with WinUWP.
+
+#if defined(WEBRTC_ANDROID)
+  return kAndroidChromiumTestsRoot;
+#elif defined WEBRTC_IOS
   return IOSRootPath();
-#else
-  std::string path = WorkingDir();
-  if (path == kFallbackPath) {
+#elif defined(WEBRTC_MAC)
+  std::string path;
+  GetNSExecutablePath(&path);
+  std::string exe_dir = DirName(path);
+  // On Mac, tests execute in out/Whatever, so src is two levels up except if
+  // the test is bundled (which our tests are not), in which case it's 5 levels.
+  return DirName(DirName(exe_dir)) + kPathDelimiter;
+#elif defined(WEBRTC_POSIX)
+  char buf[PATH_MAX];
+  ssize_t count = ::readlink("/proc/self/exe", buf, arraysize(buf));
+  if (count <= 0) {
+    RTC_NOTREACHED() << "Unable to resolve /proc/self/exe.";
     return kCannotFindProjectRootDir;
   }
-#ifdef WINUWP
-  return path + kPathDelimiter;
-#else // WINUWP
-  if (relative_dir_path_set) {
-    path = path + kPathDelimiter + relative_dir_path;
-  }
-  path = path + kPathDelimiter + ".." + kPathDelimiter + "..";
-  char canonical_path[FILENAME_MAX];
-#ifdef WIN32
-  BOOL succeeded = PathCanonicalizeA(canonical_path, path.c_str());
-#else
-  bool succeeded = realpath(path.c_str(), canonical_path) != NULL;
-#endif
-  if (succeeded) {
-    path = std::string(canonical_path) + kPathDelimiter;
-    return path;
-  } else {
-    fprintf(stderr, "Cannot find project root directory!\n");
+  // On POSIX, tests execute in out/Whatever, so src is two levels up.
+  std::string exe_dir = DirName(std::string(buf, count));
+  return DirName(DirName(exe_dir)) + kPathDelimiter;
+#elif defined(WEBRTC_WIN)
+  wchar_t buf[MAX_PATH];
+  buf[0] = 0;
+  if (GetModuleFileName(NULL, buf, MAX_PATH) == 0)
     return kCannotFindProjectRootDir;
-  }
-#endif /* WINUWP */
+
+  std::string exe_path = rtc::ToUtf8(std::wstring(buf));
+  std::string exe_dir = DirName(exe_path);
+  return DirName(DirName(exe_dir)) + kPathDelimiter;
 #endif
 }
 
 std::string OutputPath() {
-#if defined(WINUWP)
-  auto folder = Windows::Storage::ApplicationData::Current->LocalFolder;
-  wchar_t buffer[255];
-  wcsncpy_s(buffer, 255, folder->Path->Data(), _TRUNCATE);
-  return ToUtf8(buffer) + kPathDelimiter;
-#elif defined(WEBRTC_IOS)
+#if defined(WEBRTC_IOS)
   return IOSOutputPath();
 #else
   std::string path = ProjectRootPath();
@@ -208,28 +201,7 @@ std::string WorkingDir() {
 // Generate a temporary filename in a safe way.
 // Largely copied from talk/base/{unixfilesystem,win32filesystem}.cc.
 std::string TempFilename(const std::string& dir, const std::string& prefix) {
-#if defined(WINUWP)
-  rtc::Pathname fullpath = dir;
-  GUID g;
-  CoCreateGuid(&g);
-  wchar_t filename[MAX_PATH];
-
-  // printf format for the filename, consists of prefix followed by guid.
-  wchar_t* maskForFN = L"%s_%08x_%04x_%04x_%02x%02x_%02x%02x%02x%02x%02x%02x";
-  swprintf(filename, maskForFN, ToUtf16(prefix).c_str(), g.Data1, g.Data2, g.Data3,
-    UINT(g.Data4[0]), UINT(g.Data4[1]), UINT(g.Data4[2]), UINT(g.Data4[3]),
-    UINT(g.Data4[4]), UINT(g.Data4[5]), UINT(g.Data4[6]), UINT(g.Data4[7]));
-
-  fullpath.AppendPathname(ToUtf8(filename));
-  // make sure to create the file
-  ::CreateFile2(
-    ToUtf16(fullpath.pathname()).c_str(),
-    GENERIC_READ | GENERIC_WRITE,
-    FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE,
-    CREATE_NEW,
-    NULL);
-  return fullpath.pathname();
-#elif defined(WIN32)
+#ifdef WIN32
   wchar_t filename[MAX_PATH];
   if (::GetTempFileName(rtc::ToUtf16(dir).c_str(), rtc::ToUtf16(prefix).c_str(),
                         0, filename) != 0)

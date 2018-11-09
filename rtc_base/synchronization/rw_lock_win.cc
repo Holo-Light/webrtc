@@ -16,9 +16,13 @@ namespace webrtc {
 
 static bool native_rw_locks_supported = false;
 static bool module_load_attempted = false;
-#ifndef WINUWP
+
+#if !defined(WINUWP)
+// On WinUWP the symbols loaded from this library are directly present
+// in the headers and thus loading the library is not required (and
+// not allowed regardless due to WinUWP sandboxing).
 static HMODULE library = NULL;
-#endif //ndef WINUWP
+#endif //!defined(WINUWP)
 
 typedef void(WINAPI* PInitializeSRWLock)(PSRWLOCK);
 
@@ -61,12 +65,12 @@ void RWLockWin::ReleaseLockShared() {
   release_srw_lock_shared(&lock_);
 }
 
-#ifndef WINUWP
 bool RWLockWin::LoadModule() {
   if (module_load_attempted) {
     return native_rw_locks_supported;
   }
   module_load_attempted = true;
+#if !defined(WINUWP)
   // Use native implementation if supported (i.e Vista+)
   library = LoadLibrary(TEXT("Kernel32.dll"));
   if (!library) {
@@ -92,16 +96,8 @@ bool RWLockWin::LoadModule() {
     RTC_LOG(LS_VERBOSE) << "Loaded Native RW Lock";
     native_rw_locks_supported = true;
   }
-  return native_rw_locks_supported;
-}
-#else // ndef WINUWP
-// Those symbols are present on WinUWP, map them directly.
-bool RWLockWin::LoadModule() {
-  if (module_load_attempted) {
-    return native_rw_locks_supported;
-  }
-  module_load_attempted = true;
-
+#else
+  // On WinUWP these symbols are defined in the system headers.
   initialize_srw_lock = InitializeSRWLock;
   acquire_srw_lock_exclusive = AcquireSRWLockExclusive;
   release_srw_lock_exclusive = ReleaseSRWLockExclusive;
@@ -109,8 +105,8 @@ bool RWLockWin::LoadModule() {
   release_srw_lock_shared = ReleaseSRWLockShared;
 
   native_rw_locks_supported = true;
+#endif // !defined(WINUWP)
   return native_rw_locks_supported;
 }
-#endif // ndef WINUWP
 
 }  // namespace webrtc

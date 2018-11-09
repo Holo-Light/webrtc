@@ -65,9 +65,6 @@ bool IsThreadRefEqual(const PlatformThreadRef& a, const PlatformThreadRef& b);
 
 // Sets the current thread name.
 void SetCurrentThreadName(const char* name);
-#if defined(WEBRTC_WIN)
-void SetCurrentThreadNameHelper(THREADNAME_INFO threadname_info);
-#endif  // WEBRTC_WIN
 
 }  // namespace rtc
 

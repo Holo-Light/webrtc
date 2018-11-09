@@ -152,6 +152,7 @@ rtc_source_set("platform_thread") {
     ":rtc_base_approved_generic",
     ":rtc_task_queue_libevent",
     ":rtc_task_queue_win",
+    ":rtc_task_queue_stdlib",
     ":sequenced_task_checker",
   ]
   sources = [
@@ -605,15 +606,9 @@ if (is_mac || is_ios) {
 if (is_win) {
   rtc_source_set("rtc_task_queue_win") {
     visibility = [ ":rtc_task_queue_impl" ]
-    if (current_os == "winuwp") {
-      sources = [
-        "task_queue_stdlib.cc"
-      ]
-    } else {
-      sources = [
-        "task_queue_win.cc",
-      ]
-    }
+    sources = [
+      "task_queue_win.cc",
+    ]
     deps = [
       ":checks",
       ":criticalsection",
@@ -630,6 +625,26 @@ if (is_win) {
   }
 }
 
+rtc_source_set("rtc_task_queue_stdlib") {
+  visibility = [ ":rtc_task_queue_impl" ]
+  sources = [
+    "task_queue_stdlib.cc",
+  ]
+  deps = [
+    ":checks",
+    ":criticalsection",
+    ":logging",
+    ":macromagic",
+    ":platform_thread",
+    ":ptr_util",
+    ":refcount",
+    ":rtc_event",
+    ":rtc_task_queue_api",
+    ":safe_conversions",
+    ":timeutils",
+  ]
+}
+
 rtc_source_set("rtc_task_queue_impl") {
   visibility = [ "*" ]
   if (rtc_enable_libevent) {
@@ -643,9 +658,15 @@ rtc_source_set("rtc_task_queue_impl") {
       ]
     }
     if (is_win) {
-      deps = [
-        ":rtc_task_queue_win",
-      ]
+      if (current_os == "winuwp") {
+        deps = [
+          ":rtc_task_queue_stdlib",
+        ]
+      } else {
+        deps = [
+          ":rtc_task_queue_win",
+        ]
+      }
     }
   }
 }
@@ -909,18 +930,16 @@ rtc_static_library("rtc_base_generic") {
         "..:no_exit_time_destructors",
         "..:no_global_constructors",
       ]
-      sources += [
-        "win32socketinit.cc",
-        "win32socketinit.h",
-        "win32socketserver.cc",
-        "win32socketserver.h",
-      ]
-      if (current_os == "winuwp") {
-        sources -= [
+      if (current_os != "winuwp") {
+        sources += [
           "win32socketserver.cc",
           "win32socketserver.h",
         ]
       }
+      sources += [
+        "win32socketinit.cc",
+        "win32socketinit.h",
+      ]
     }
   }  # !build_with_chromium
 
