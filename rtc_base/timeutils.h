@@ -64,7 +64,7 @@ ClockInterface* GetClockForTesting();
 // Synchronizes the current clock based upon an NTP server's epoch in
 // milliseconds.
 void SyncWithNtp(int64_t time_from_ntp_server_ms);
-#endif //defined(WINUWP)
+#endif  // defined(WINUWP)
 
 // Returns the actual system time, even if a clock is set for testing.
 // Useful for timeouts while using a test clock, or for logging.

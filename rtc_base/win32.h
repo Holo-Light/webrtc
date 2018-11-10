@@ -49,12 +49,13 @@ int win32_inet_pton(int af, const char* src, void* dst);
 // Convert a Utf8 path representation to a non-length-limited Unicode pathname.
 bool Utf8ToWindowsFilename(const std::string& utf8, std::wstring* filename);
 
-#if !defined(WINUWP)
 enum WindowsMajorVersions {
   kWindows2000 = 5,
   kWindowsVista = 6,
   kWindows10 = 10,
 };
+
+#if !defined(WINUWP)
 bool GetOsVersion(int* major, int* minor, int* build);
 
 inline bool IsWindowsVistaOrLater() {
@@ -114,7 +115,7 @@ inline bool IsCurrentProcessLowIntegrity() {
   return true;
 }
 
-#endif // !defined(WINUWP)
+#endif  // !defined(WINUWP)
 
 }  // namespace rtc
 

@@ -653,7 +653,7 @@ struct NegotiateAuthContext : public HttpAuthContext {
     FreeCredentialsHandle(&cred);
   }
 };
-#endif  // WEBRTC_WIN && !defined(WINUWP)
+#endif  // defined(WEBRTC_WIN) && !defined(WINUWP)
 
 HttpAuthResult HttpAuthenticate(const char* challenge,
                                 size_t len,
@@ -951,7 +951,7 @@ HttpAuthResult HttpAuthenticate(const char* challenge,
     return HAR_RESPONSE;
   }
 #endif
-#endif  // WEBRTC_WIN
+#endif  // defined(WEBRTC_WIN) && !defined(WINUWP)
 
   return HAR_IGNORE;
 }

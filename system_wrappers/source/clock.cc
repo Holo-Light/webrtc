@@ -81,12 +81,11 @@ class RealTimeClock : public Clock {
 
 #if defined(WINUWP)
 class WinUwpRealTimeClock : public RealTimeClock {
-public:
+ public:
   WinUwpRealTimeClock() {}
   ~WinUwpRealTimeClock() override {}
 
-protected:
-
+ protected:
   timeval CurrentTimeVal() const override {
     // The rtc::SystemTimeNanos() method is already time offset from a base
     // epoch value and might as be synchronized against an NTP time server as

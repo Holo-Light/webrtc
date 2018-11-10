@@ -50,20 +50,23 @@ ClockInterface* GetClockForTesting() {
 namespace {
 
 class TimeHelper {
-public:
+ public:
   // Resets the clock based upon an NTP server. This routine must be called
   // prior to the main system start-up to ensure all clocks are based upon
   // an NTP server time if NTP synchronization is required. No critical
   // section is used thus this method must be called prior to any clock
   // routines being used.
   static void SyncWithNtp(int64_t ntp_server_time_ms) {
-    auto &me = Singleton();
+    auto& me = Singleton();
 
     TIME_ZONE_INFORMATION time_zone;
     GetTimeZoneInformation(&time_zone);
-    int64_t time_zone_bias = (int64_t)time_zone.Bias * 60 * 1000 * 1000 * 1000;  // ns
+    int64_t time_zone_bias =
+        (int64_t)time_zone.Bias * 60 * 1000 * 1000 * 1000;  // ns
 
-    me.app_start_time_ns_ = (ntp_server_time_ms - kNTPTimeToUnixTimeEpochOffset) * 1000000 - time_zone_bias;
+    me.app_start_time_ns_ =
+        (ntp_server_time_ms - kNTPTimeToUnixTimeEpochOffset) * 1000000 -
+        time_zone_bias;
 
     me.UpdateReferenceTime();
   }
@@ -72,34 +75,37 @@ public:
   static int64_t TicksNs() {
     int64_t result = 0;
 
-    auto &me = Singleton();
+    auto& me = Singleton();
 
     LARGE_INTEGER qpcnt;
     QueryPerformanceCounter(&qpcnt);
-    result = (int64_t)((((uint64_t)qpcnt.QuadPart) * 100000ull / ((uint64_t)me.os_ticks_per_second_)) * 10000ull);
+    result = (int64_t)((((uint64_t)qpcnt.QuadPart) * 100000ull /
+                        ((uint64_t)me.os_ticks_per_second_)) *
+                       10000ull);
     result = me.app_start_time_ns_ + result - me.time_since_os_start_ns_;
     return result;
   }
 
-protected:
-
+ protected:
   TimeHelper() {
     TIME_ZONE_INFORMATION time_zone;
     GetTimeZoneInformation(&time_zone);
-    int64_t time_zone_bias = (int64_t)time_zone.Bias * 60 * 1000 * 1000 * 1000;  // ns
-    FILETIME ft; // In hns.
+    int64_t time_zone_bias =
+        (int64_t)time_zone.Bias * 60 * 1000 * 1000 * 1000;  // ns
+    FILETIME ft;                                            // In hns.
     // this will give us system file in UTC format
     GetSystemTimeAsFileTime(&ft);
     LARGE_INTEGER li;
     li.HighPart = ft.dwHighDateTime;
     li.LowPart = ft.dwLowDateTime;
 
-    app_start_time_ns_ = (li.QuadPart - kFileTimeToUnixTimeEpochOffset) * 100 - time_zone_bias;
+    app_start_time_ns_ =
+        (li.QuadPart - kFileTimeToUnixTimeEpochOffset) * 100 - time_zone_bias;
 
     UpdateReferenceTime();
   }
 
-  static TimeHelper &Singleton() {
+  static TimeHelper& Singleton() {
     static TimeHelper Singleton;
     return Singleton;
   }
@@ -111,30 +117,33 @@ protected:
 
     LARGE_INTEGER qpcnt;
     QueryPerformanceCounter(&qpcnt);
-    time_since_os_start_ns_ = (int64_t)((((uint64_t)qpcnt.QuadPart) * 100000ull / ((uint64_t)os_ticks_per_second_)) * 10000ull);
+    time_since_os_start_ns_ =
+        (int64_t)((((uint64_t)qpcnt.QuadPart) * 100000ull /
+                   ((uint64_t)os_ticks_per_second_)) *
+                  10000ull);
   }
 
-private:
+ private:
   static const uint64_t kFileTimeToUnixTimeEpochOffset = 116444736000000000ULL;
   static const uint64_t kNTPTimeToUnixTimeEpochOffset = 2208988800000L;
 
   // The number of nanoseconds since unix system epoch
-  int64_t app_start_time_ns_ {};
+  int64_t app_start_time_ns_{};
 
   // The number of nanoseconds since the OS started
-  int64_t time_since_os_start_ns_ {};
+  int64_t time_since_os_start_ns_{};
 
   // The OS calculated ticks per second
-  int64_t os_ticks_per_second_ {};
+  int64_t os_ticks_per_second_{};
 };
 
-} // namespace
+}  // namespace
 
 void SyncWithNtp(int64_t time_from_ntp_server_ms) {
   TimeHelper::SyncWithNtp(time_from_ntp_server_ms);
 }
 
-#endif // defined(WINUWP)
+#endif  // defined(WINUWP)
 
 int64_t SystemTimeNanos() {
   int64_t ticks;

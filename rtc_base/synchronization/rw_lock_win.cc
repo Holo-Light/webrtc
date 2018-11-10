@@ -22,7 +22,7 @@ static bool module_load_attempted = false;
 // in the headers and thus loading the library is not required (and
 // not allowed regardless due to WinUWP sandboxing).
 static HMODULE library = NULL;
-#endif //!defined(WINUWP)
+#endif  //! defined(WINUWP)
 
 typedef void(WINAPI* PInitializeSRWLock)(PSRWLOCK);
 

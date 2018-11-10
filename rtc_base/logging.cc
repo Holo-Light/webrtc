@@ -372,10 +372,7 @@ void LogMessage::OutputToDebug(const std::string& str,
   }
 #endif  // defined(WEBRTC_MAC) && !defined(WEBRTC_IOS) && defined(NDEBUG)
 
-#if defined(WINUWP)
-  // Always log to the debugger.
-  OutputDebugString(rtc::ToUtf16(str).c_str());
-#elif defined(WEBRTC_WIN)
+#if defined(WEBRTC_WIN)
   // Always log to the debugger.
   // Perhaps stderr should be controlled by a preference, as on Mac?
   OutputDebugStringA(str.c_str());
@@ -388,7 +385,7 @@ void LogMessage::OutputToDebug(const std::string& str,
                   &written, 0);
     }
   }
-#endif  // defined(WEBRTC_WIN)
+#endif  // WEBRTC_WIN
 
 #if defined(WEBRTC_ANDROID)
   // Android's logging facility uses severity to log messages but we

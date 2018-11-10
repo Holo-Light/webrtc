@@ -561,11 +561,9 @@ rtc_source_set("test_common") {
     # The filtering of *_win.cc is not done for WinUWP but the peek/dispatch
     # Win32 runloops are not WinUWP compatible thus use the generic runloop
     # for non-Windows targets.
-    sources -= [
-      "win/run_loop_win.cc",
-    ]
+    sources -= [ "win/run_loop_win.cc", ]
   }
-  if ((!is_win) || (current_os == "winuwp")) {
+  if (!is_win || current_os == "winuwp") {
     sources += [
       "run_loop.cc",
       "run_loop.h",
