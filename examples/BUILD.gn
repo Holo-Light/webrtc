@@ -52,9 +52,17 @@ group("examples") {
       ":relayserver",
       ":stunserver",
       ":turnserver",
+      ":spinningcube_client",
+      ":spinningcube_server",
+      ":spinningcube_relayserver",
+      ":spinningcube_stunserver",
+      ":spinningcube_turnserver",
     ]
     if (current_os == "winuwp") {
-      deps -= [ ":peerconnection_client" ]
+      deps -= [
+        ":peerconnection_client",
+        ":spinningcube_client",
+        ]
     }
   }
 
@@ -819,6 +827,197 @@ if (is_linux || is_win) {
     }
   }
   rtc_executable("stunserver") {
+    testonly = true
+    sources = [
+      "stunserver/stunserver_main.cc",
+    ]
+    deps = [
+      "../p2p:rtc_p2p",
+      "../pc:rtc_pc",
+      "../rtc_base:rtc_base",
+      "../rtc_base:rtc_base_approved",
+      "../system_wrappers:field_trial_default",
+      "../system_wrappers:metrics_default",
+      "../system_wrappers:runtime_enabled_features_default",
+    ]
+    if (!build_with_chromium && is_clang) {
+      # Suppress warnings from the Chromium Clang plugin (bugs.webrtc.org/163).
+      suppressed_configs += [ "//build/config/clang:find_bad_constructs" ]
+    }
+  }
+}
+
+if (is_linux || is_win) {
+  if (current_os != "winuwp") {
+    rtc_executable("spinningcube_client") {
+      testonly = true
+      sources = [
+        "spinningcube/client/conductor.cc",
+        "spinningcube/client/conductor.h",
+        "spinningcube/client/defaults.cc",
+        "spinningcube/client/defaults.h",
+        "spinningcube/client/peer_connection_client.cc",
+        "spinningcube/client/peer_connection_client.h",
+      ]
+
+      if (!build_with_chromium && is_clang) {
+        # Suppress warnings from the Chromium Clang plugin (bugs.webrtc.org/163).
+        suppressed_configs += [ "//build/config/clang:find_bad_constructs" ]
+      }
+      deps = [
+        "../api:libjingle_peerconnection_api",
+        "../api/video:video_frame_i420",
+        "../rtc_base:checks",
+        "../rtc_base:stringutils",
+        "../rtc_base/third_party/sigslot",
+      ]
+      if (is_win) {
+        sources += [
+          "spinningcube/client/flagdefs.h",
+          "spinningcube/client/main.cc",
+          "spinningcube/client/main_wnd.cc",
+          "spinningcube/client/main_wnd.h",
+        ]
+        configs += [ "//build/config/win:windowed" ]
+        deps += [ "../media:rtc_media_base" ]
+      }
+      if (is_linux) {
+        sources += [
+          "spinningcube/client/linux/main.cc",
+          "spinningcube/client/linux/main_wnd.cc",
+          "spinningcube/client/linux/main_wnd.h",
+        ]
+        if (is_win) {
+          sources += [
+            "spinningcube/client/flagdefs.h",
+            "spinningcube/client/main.cc",
+            "spinningcube/client/main_wnd.cc",
+            "spinningcube/client/main_wnd.h",
+          ]
+          cflags = [ "/wd4245" ]
+          configs += [ "//build/config/win:windowed" ]
+          deps += [ "../media:rtc_media_base" ]
+        }
+        if (is_linux) {
+          sources += [
+            "spinningcube/client/linux/main.cc",
+            "spinningcube/client/linux/main_wnd.cc",
+            "spinningcube/client/linux/main_wnd.h",
+          ]
+          cflags = [ "-Wno-deprecated-declarations" ]
+          libs = [
+            "X11",
+            "Xcomposite",
+            "Xext",
+            "Xrender",
+          ]
+          deps += [ "//build/config/linux/gtk" ]
+        }
+        configs += [ ":peerconnection_client_warnings_config" ]
+
+        deps += [
+          "../api:libjingle_peerconnection_api",
+          "../api:libjingle_peerconnection_test_api",
+          "../api:video_frame_api",
+          "../api/audio_codecs:builtin_audio_decoder_factory",
+          "../api/audio_codecs:builtin_audio_encoder_factory",
+          "../media:rtc_audio_video",
+          "../modules/video_capture:video_capture_module",
+          "../pc:libjingle_peerconnection",
+          "../rtc_base:rtc_base",
+          "../rtc_base:rtc_base_approved",
+          "../rtc_base:rtc_json",
+          "../system_wrappers:field_trial_default",
+          "../system_wrappers:metrics_default",
+          "../system_wrappers:runtime_enabled_features_default",
+          "//third_party/libyuv",
+        ]
+      }
+
+      deps += [
+        "../api:libjingle_peerconnection_api",
+        "../api/audio_codecs:builtin_audio_decoder_factory",
+        "../api/audio_codecs:builtin_audio_encoder_factory",
+        "../api/video:video_frame",
+        "../api/video_codecs:builtin_video_decoder_factory",
+        "../api/video_codecs:builtin_video_encoder_factory",
+        "../media:rtc_audio_video",
+        "../modules/audio_device:audio_device",
+        "../modules/audio_processing:audio_processing",
+        "../modules/video_capture:video_capture_module",
+        "../pc:libjingle_peerconnection",
+        "../rtc_base:rtc_base",
+        "../rtc_base:rtc_base_approved",
+        "../rtc_base:rtc_json",
+        "../system_wrappers:field_trial_default",
+        "../system_wrappers:metrics_default",
+        "../system_wrappers:runtime_enabled_features_default",
+        "//third_party/libyuv",
+      ]
+    }
+  }
+
+  rtc_executable("spinningcube_server") {
+    testonly = true
+    sources = [
+      "spinningcube/server/data_socket.cc",
+      "spinningcube/server/data_socket.h",
+      "spinningcube/server/main.cc",
+      "spinningcube/server/peer_channel.cc",
+      "spinningcube/server/peer_channel.h",
+      "spinningcube/server/utils.cc",
+      "spinningcube/server/utils.h",
+    ]
+    deps = [
+      "..:webrtc_common",
+      "../rtc_base:rtc_base_approved",
+      "../rtc_base:stringutils",
+      "../rtc_tools:command_line_parser",
+    ]
+    if (!build_with_chromium && is_clang) {
+      # Suppress warnings from the Chromium Clang plugin (bugs.webrtc.org/163).
+      suppressed_configs += [ "//build/config/clang:find_bad_constructs" ]
+    }
+  }
+  rtc_executable("spinningcube_relayserver") {
+    testonly = true
+    sources = [
+      "relayserver/relayserver_main.cc",
+    ]
+    deps = [
+      "../p2p:rtc_p2p",
+      "../pc:rtc_pc",
+      "../rtc_base:rtc_base",
+      "../rtc_base:rtc_base_approved",
+      "../system_wrappers:field_trial_default",
+      "../system_wrappers:metrics_default",
+      "../system_wrappers:runtime_enabled_features_default",
+    ]
+    if (!build_with_chromium && is_clang) {
+      # Suppress warnings from the Chromium Clang plugin (bugs.webrtc.org/163).
+      suppressed_configs += [ "//build/config/clang:find_bad_constructs" ]
+    }
+  }
+  rtc_executable("spinningcube_turnserver") {
+    testonly = true
+    sources = [
+      "turnserver/turnserver_main.cc",
+    ]
+    deps = [
+      "../p2p:rtc_p2p",
+      "../pc:rtc_pc",
+      "../rtc_base:rtc_base",
+      "../rtc_base:rtc_base_approved",
+      "../system_wrappers:field_trial_default",
+      "../system_wrappers:metrics_default",
+      "../system_wrappers:runtime_enabled_features_default",
+    ]
+    if (!build_with_chromium && is_clang) {
+      # Suppress warnings from the Chromium Clang plugin (bugs.webrtc.org/163).
+      suppressed_configs += [ "//build/config/clang:find_bad_constructs" ]
+    }
+  }
+  rtc_executable("spinningcube_stunserver") {
     testonly = true
     sources = [
       "stunserver/stunserver_main.cc",
