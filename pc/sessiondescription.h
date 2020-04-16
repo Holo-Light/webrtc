@@ -46,7 +46,7 @@ extern const char kMediaProtocolUdpDtlsSctp[];
 extern const char kMediaProtocolTcpDtlsSctp[];
 
 // Options to control how session descriptions are generated.
-const int kAutoBandwidth = -1;
+const int kAutoBandwidth = 2000000000; // setting the maximum bandwith to 2gbit otherwise the bandwith the app can used is limited regardless of all other settings.
 
 class AudioContentDescription;
 class VideoContentDescription;
