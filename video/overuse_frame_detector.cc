@@ -51,7 +51,7 @@ const int kMaxOverusesBeforeApplyRampupDelay = 4;
 // The maximum exponent to use in VCMExpFilter.
 const float kMaxExp = 7.0f;
 // Default value used before first reconfiguration.
-const int kDefaultFrameRate = 100;
+const int kDefaultFrameRate = 60;
 // Default sample diff, default frame rate.
 const float kDefaultSampleDiffMs = 800.0f / kDefaultFrameRate;
 // A factor applied to the sample diff on OnTargetFramerateUpdated to determine

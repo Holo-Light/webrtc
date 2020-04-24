@@ -30,7 +30,7 @@ struct DataChannelInit {
   bool reliable = false;
 
   // True if ordered delivery is required.
-  bool ordered = true;
+  bool ordered = false;
 
   // The max period of time in milliseconds in which retransmissions will be
   // sent. After this time, no more retransmissions will be sent. -1 if unset.
@@ -41,7 +41,7 @@ struct DataChannelInit {
   // The max number of retransmissions. -1 if unset.
   //
   // Cannot be set along with |maxRetransmitTime|.
-  int maxRetransmits = -1;
+  int maxRetransmits = 0;
 
   // This is set by the application and opaque to the WebRTC implementation.
   std::string protocol;
