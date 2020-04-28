@@ -133,9 +133,9 @@ class XRTimestampExtension {
   // TODO: change this to something meaningful
   static constexpr const char kUri[] = "http://www.holo-light.com/404";
 
-  static bool Parse(rtc::ArrayView<const uint8_t> data, XRTimestamp* timestamp);
-  static size_t ValueSize(const XRTimestamp&) { return kValueSizeBytes; }
-  static bool Write(rtc::ArrayView<uint8_t> data, const XRTimestamp& timestamp);
+  static bool Parse(rtc::ArrayView<const uint8_t> data, XRFrameData* timestamp);
+  static size_t ValueSize(const XRFrameData&) { return kValueSizeBytes; }
+  static bool Write(rtc::ArrayView<uint8_t> data, const XRFrameData& timestamp);
 };
 
 class VideoContentTypeExtension {

@@ -60,7 +60,7 @@ struct RTPVideoHeader {
   VideoSendTiming video_timing;
   FrameMarking frame_marking;
   RTPVideoTypeHeader video_type_header;
-  XRTimestamp xr_timestamp;
+  XRFrameData xr_frame_data;
 };
 
 }  // namespace webrtc

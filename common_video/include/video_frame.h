@@ -89,7 +89,7 @@ class EncodedImage {
     int64_t receive_finish_ms = 0;
   } timing_;
 
-  XRTimestamp xr_timestamp_;
+  XRFrameData xr_frame_data_;
 
  private:
   uint32_t timestamp_rtp_ = 0;

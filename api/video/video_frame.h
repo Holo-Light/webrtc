@@ -128,8 +128,8 @@ class VideoFrame {
     return video_frame_buffer()->type() == VideoFrameBuffer::Type::kNative;
   }
 
-  XRTimestamp xr_timestamp() const { return xr_timestamp_; }
-  void set_xr_timestamp(XRTimestamp timestamp) { xr_timestamp_ = timestamp; }
+  XRFrameData xr_frame_data() const { return xr_frame_data_; }
+  void set_xr_frame_data(XRFrameData timestamp) { xr_frame_data_ = timestamp; }
 
  private:
   VideoFrame(const rtc::scoped_refptr<VideoFrameBuffer>& buffer,
@@ -145,7 +145,7 @@ class VideoFrame {
   int64_t ntp_time_ms_;
   int64_t timestamp_us_;
   VideoRotation rotation_;
-  XRTimestamp xr_timestamp_;
+  XRFrameData xr_frame_data_;
   absl::optional<ColorSpace> color_space_;
 };
 

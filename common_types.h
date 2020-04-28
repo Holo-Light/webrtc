@@ -412,9 +412,9 @@ struct PlayoutDelay {
 
 // TODO: maybe rename this XRFrameData or something, because it's more than a
 // timestamp
-struct XRTimestamp {
-  XRTimestamp() = default;
-  XRTimestamp(int64_t timestamp, float fx, float fy, float fz)
+struct XRFrameData {
+  XRFrameData() = default;
+  XRFrameData(int64_t timestamp, float fx, float fy, float fz)
       : prediction(timestamp), focus_x(fx), focus_y(fy), focus_z(fz) {}
 
   int64_t prediction = 0;

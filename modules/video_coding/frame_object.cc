@@ -110,7 +110,7 @@ RtpFrameObject::RtpFrameObject(PacketBuffer* packet_buffer,
   }
   timing_.flags = last_packet->video_header.video_timing.flags;
 
-  xr_timestamp_ = last_packet->video_header.xr_timestamp;
+  xr_frame_data_ = last_packet->video_header.xr_frame_data;
 }
 
 RtpFrameObject::~RtpFrameObject() {

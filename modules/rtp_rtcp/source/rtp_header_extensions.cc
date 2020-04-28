@@ -236,8 +236,8 @@ bool PlayoutDelayLimits::Write(rtc::ArrayView<uint8_t> data,
 // Windows Holographic or OpenXR).
 
 bool XRTimestampExtension::Parse(rtc::ArrayView<const uint8_t> data,
-                                 XRTimestamp* timestamp) {
-  timestamp->prediction = ByteReader<int64_t>::ReadBigEndian(data.data());
+                                 XRFrameData* xr_frame_data) {
+  xr_frame_data->prediction = ByteReader<int64_t>::ReadBigEndian(data.data());
 
   // TODO: replace manual offsets with constants like in videotiming or
   // somewhere else. it's less fugly.
@@ -246,20 +246,20 @@ bool XRTimestampExtension::Parse(rtc::ArrayView<const uint8_t> data,
   auto half_y = ByteReader<uint16_t>::ReadBigEndian(data.data() + 10);
   auto half_z = ByteReader<uint16_t>::ReadBigEndian(data.data() + 12);
 
-  timestamp->focus_x = half_to_float(half_x);
-  timestamp->focus_y = half_to_float(half_y);
-  timestamp->focus_z = half_to_float(half_z);
+  xr_frame_data->focus_x = half_to_float(half_x);
+  xr_frame_data->focus_y = half_to_float(half_y);
+  xr_frame_data->focus_z = half_to_float(half_z);
 
   return true;
 }
 
 bool XRTimestampExtension::Write(rtc::ArrayView<uint8_t> data,
-                                 const XRTimestamp& timestamp) {
-  ByteWriter<int64_t>::WriteBigEndian(data.data(), timestamp.prediction);
+                                 const XRFrameData& xr_frame_data) {
+  ByteWriter<int64_t>::WriteBigEndian(data.data(), xr_frame_data.prediction);
 
-  auto half_x = half_from_float(timestamp.focus_x);
-  auto half_y = half_from_float(timestamp.focus_y);
-  auto half_z = half_from_float(timestamp.focus_z);
+  auto half_x = half_from_float(xr_frame_data.focus_x);
+  auto half_y = half_from_float(xr_frame_data.focus_y);
+  auto half_z = half_from_float(xr_frame_data.focus_z);
 
   ByteWriter<uint16_t>::WriteBigEndian(data.data() + 8, half_x);
   ByteWriter<uint16_t>::WriteBigEndian(data.data() + 10, half_y);

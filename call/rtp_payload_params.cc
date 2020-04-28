@@ -142,7 +142,7 @@ RTPVideoHeader RtpPayloadParams::GetRtpVideoHeader(
   rtp_video_header.rotation = image.rotation_;
   rtp_video_header.content_type = image.content_type_;
   rtp_video_header.playout_delay = image.playout_delay_;
-  rtp_video_header.xr_timestamp = image.xr_timestamp_;
+  rtp_video_header.xr_frame_data = image.xr_frame_data_;
 
   SetVideoTiming(image, &rtp_video_header.video_timing);
 

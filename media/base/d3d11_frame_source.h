@@ -28,7 +28,7 @@ namespace hlr {
 
         ~D3D11VideoFrameSource() override;
 
-        void OnFrameCaptured(ID3D11Texture2D* rendered_image, webrtc::XRTimestamp timestamp = webrtc::XRTimestamp());
+        void OnFrameCaptured(ID3D11Texture2D* rendered_image, webrtc::XRFrameData xr_frame_data = webrtc::XRFrameData());
 
         absl::optional<bool> needs_denoising() const override;
 
