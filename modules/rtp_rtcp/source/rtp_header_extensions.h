@@ -113,12 +113,12 @@ class PlayoutDelayLimits {
                     const PlayoutDelay& playout_delay);
 };
 
-// This represents a timestamp obtained from the Windows Holographic API
-// (and maybe other such APIs in the future) so we can correlate frame
-// data with other data we receive via DataChannel.
-class XRTimestampExtension {
+// This represents data obtained from the Windows Holographic API
+// (and maybe other such APIs in the future) so we can correlate it
+// with a video frame when receiving it back on the client.
+class XRFrameDataExtension {
  public:
-  static constexpr RTPExtensionType kId = kRtpExtensionXRTimestamp;
+  static constexpr RTPExtensionType kId = kRtpExtensionXRFrameData;
 
   // Note carefully that the one-byte header form allows for data lengths
   // between 1 and 16 bytes, by adding 1 to the signaled length value

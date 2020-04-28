@@ -527,8 +527,8 @@ RtpCapabilities WebRtcVideoEngine::GetCapabilities() const {
                            webrtc::RtpExtension::kFrameMarkingDefaultId));
 
   capabilities.header_extensions.push_back(
-    webrtc::RtpExtension(webrtc::RtpExtension::kXRTimestampExtensionUri,
-    webrtc::RtpExtension::kXRTimestampExtensionDefaultId)
+    webrtc::RtpExtension(webrtc::RtpExtension::kXRFrameDataExtensionUri,
+    webrtc::RtpExtension::kXRFrameDataExtensionDefaultId)
   );
   // TODO(bugs.webrtc.org/4050): Add MID header extension as capability once MID
   // demuxing is completed.

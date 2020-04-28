@@ -501,9 +501,9 @@ void RtpHeaderParser::ParseOneByteExtensionHeader(
           RTC_LOG(WARNING)
               << "RtpGenericFrameDescriptor unsupported by rtp header parser.";
           break;
-        case kRtpExtensionXRTimestamp:
+        case kRtpExtensionXRFrameData:
           RTC_LOG(WARNING)
-              << "kRtpExtensionXRTimestamp unsupported by rtp header parser.";
+              << "kRtpExtensionXRFrameData unsupported by rtp header parser.";
           break;
         case kRtpExtensionNone:
         case kRtpExtensionNumberOfExtensions: {

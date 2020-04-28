@@ -235,7 +235,7 @@ bool PlayoutDelayLimits::Write(rtc::ArrayView<uint8_t> data,
 // To correlate a frame to a point in time in the XR framework of choice (e.g.
 // Windows Holographic or OpenXR).
 
-bool XRTimestampExtension::Parse(rtc::ArrayView<const uint8_t> data,
+bool XRFrameDataExtension::Parse(rtc::ArrayView<const uint8_t> data,
                                  XRFrameData* xr_frame_data) {
   xr_frame_data->prediction = ByteReader<int64_t>::ReadBigEndian(data.data());
 
@@ -253,7 +253,7 @@ bool XRTimestampExtension::Parse(rtc::ArrayView<const uint8_t> data,
   return true;
 }
 
-bool XRTimestampExtension::Write(rtc::ArrayView<uint8_t> data,
+bool XRFrameDataExtension::Write(rtc::ArrayView<uint8_t> data,
                                  const XRFrameData& xr_frame_data) {
   ByteWriter<int64_t>::WriteBigEndian(data.data(), xr_frame_data.prediction);
 

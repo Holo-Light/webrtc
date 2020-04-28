@@ -136,9 +136,9 @@ const int RtpExtension::kFrameMarkingDefaultId = 10;
 const char RtpExtension::kEncryptHeaderExtensionsUri[] =
     "urn:ietf:params:rtp-hdrext:encrypt";
 
-const char RtpExtension::kXRTimestampExtensionUri[] =
+const char RtpExtension::kXRFrameDataExtensionUri[] =
   "http://www.holo-light.com/404";
-const int RtpExtension::kXRTimestampExtensionDefaultId = 14;
+const int RtpExtension::kXRFrameDataExtensionDefaultId = 14;
 
 const int RtpExtension::kMinId = 1;
 const int RtpExtension::kMaxId = 14;
@@ -159,7 +159,7 @@ bool RtpExtension::IsSupportedForVideo(const std::string& uri) {
          uri == webrtc::RtpExtension::kVideoTimingUri ||
          uri == webrtc::RtpExtension::kMidUri ||
          uri == webrtc::RtpExtension::kFrameMarkingUri ||
-         uri == webrtc::RtpExtension::kXRTimestampExtensionUri;
+         uri == webrtc::RtpExtension::kXRFrameDataExtensionUri;
 }
 
 bool RtpExtension::IsEncryptionSupported(const std::string& uri) {
