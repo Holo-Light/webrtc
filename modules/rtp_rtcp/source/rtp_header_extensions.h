@@ -126,10 +126,9 @@ class XRFrameDataExtension {
   // from https://tools.ietf.org/html/rfc5285
   // That means our size is not what we might expect.
 
-  //Also, we have a int64_t (8 bytes) for the time and three 2-byte floating point values
-  //on the wire because full floats are too damn big for the extension and the
-  //writing code just silently fails.
-  static constexpr uint8_t kValueSizeBytes = 13;
+  //Also, we have a uint16_t for the frame number and three 4-byte floating point values
+  //on the wire -> 2 + 3*4 = 14 bytes
+  static constexpr uint8_t kValueSizeBytes = 14;
   // TODO: change this to something meaningful
   static constexpr const char kUri[] = "http://www.holo-light.com/404";
 

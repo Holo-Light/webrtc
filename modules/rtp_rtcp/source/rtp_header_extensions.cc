@@ -15,9 +15,6 @@
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
 
-// This is for focus point in XR data extension.
-#include "half.h"
-
 namespace webrtc {
 // Absolute send time in RTP streams.
 //
@@ -237,33 +234,45 @@ bool PlayoutDelayLimits::Write(rtc::ArrayView<uint8_t> data,
 
 bool XRFrameDataExtension::Parse(rtc::ArrayView<const uint8_t> data,
                                  XRFrameData* xr_frame_data) {
-  xr_frame_data->prediction = ByteReader<int64_t>::ReadBigEndian(data.data());
+  RTC_DCHECK_EQ(data.size(), kValueSizeBytes);
+  xr_frame_data->frame_number =
+      ByteReader<uint16_t>::ReadBigEndian(data.data());
 
   // TODO: replace manual offsets with constants like in videotiming or
   // somewhere else. it's less fugly.
 
-  auto half_x = ByteReader<uint16_t>::ReadBigEndian(data.data() + 8);
-  auto half_y = ByteReader<uint16_t>::ReadBigEndian(data.data() + 10);
-  auto half_z = ByteReader<uint16_t>::ReadBigEndian(data.data() + 12);
+  // ByteReader does not support floats, so we'll have to fumble with this shit
+  // ourselves. The approach we take is the one outlined in
+  // https://stackoverflow.com/a/26310278
+  const uint8_t* focus_x_bytes = data.subview(2, 4).data();
+  const uint8_t* focus_y_bytes = data.subview(6, 4).data();
+  const uint8_t* focus_z_bytes = data.subview(10, 4).data();
 
-  xr_frame_data->focus_x = half_to_float(half_x);
-  xr_frame_data->focus_y = half_to_float(half_y);
-  xr_frame_data->focus_z = half_to_float(half_z);
+  // Please note that this might fail more or less spectacularly on platforms
+  // that have different endianness and a different floating point format.
+  memcpy(&xr_frame_data->focus_x, focus_x_bytes, sizeof(float));
+  memcpy(&xr_frame_data->focus_y, focus_y_bytes, sizeof(float));
+  memcpy(&xr_frame_data->focus_z, focus_z_bytes, sizeof(float));
 
   return true;
 }
 
 bool XRFrameDataExtension::Write(rtc::ArrayView<uint8_t> data,
                                  const XRFrameData& xr_frame_data) {
-  ByteWriter<int64_t>::WriteBigEndian(data.data(), xr_frame_data.prediction);
+  RTC_DCHECK_EQ(data.size(), kValueSizeBytes);
+  ByteWriter<uint16_t>::WriteBigEndian(data.data(), xr_frame_data.frame_number);
 
-  auto half_x = half_from_float(xr_frame_data.focus_x);
-  auto half_y = half_from_float(xr_frame_data.focus_y);
-  auto half_z = half_from_float(xr_frame_data.focus_z);
+  const uint8_t* focus_x_ptr = reinterpret_cast<const uint8_t*>(&xr_frame_data.focus_x);
+  const uint8_t* focus_y_ptr = reinterpret_cast<const uint8_t*>(&xr_frame_data.focus_y);
+  const uint8_t* focus_z_ptr = reinterpret_cast<const uint8_t*>(&xr_frame_data.focus_z);
 
-  ByteWriter<uint16_t>::WriteBigEndian(data.data() + 8, half_x);
-  ByteWriter<uint16_t>::WriteBigEndian(data.data() + 10, half_y);
-  ByteWriter<uint16_t>::WriteBigEndian(data.data() + 12, half_z);
+  auto focus_x_subview = data.subview(2, 4);
+  auto focus_y_subview = data.subview(6, 4);
+  auto focus_z_subview = data.subview(10, 4);
+
+  memcpy(focus_x_subview.data(), focus_x_ptr, sizeof(float));
+  memcpy(focus_y_subview.data(), focus_y_ptr, sizeof(float));
+  memcpy(focus_z_subview.data(), focus_z_ptr, sizeof(float));
 
   return true;
 }
