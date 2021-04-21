@@ -309,9 +309,10 @@ bool UDPPort::HandleIncomingPacket(rtc::AsyncPacketSocket* socket,
                                    const char* data,
                                    size_t size,
                                    const rtc::SocketAddress& remote_addr,
-                                   const rtc::PacketTime& packet_time) {
+                                   const rtc::PacketTime& packet_time,
+                                   unsigned short tc) {
   // All packets given to UDP port will be consumed.
-  OnReadPacket(socket, data, size, remote_addr, packet_time);
+  OnReadPacket(socket, data, size, remote_addr, packet_time, tc);
   return true;
 }
 
@@ -352,10 +353,9 @@ void UDPPort::OnReadPacket(rtc::AsyncPacketSocket* socket,
                            const char* data,
                            size_t size,
                            const rtc::SocketAddress& remote_addr,
-                           const rtc::PacketTime& packet_time) {
+                           const rtc::PacketTime& packet_time, unsigned short tc) {
   RTC_DCHECK(socket == socket_);
   RTC_DCHECK(!remote_addr.IsUnresolvedIP());
-
   // Look for a response from the STUN server.
   // Even if the response doesn't match one of our outstanding requests, we
   // will eat it because it might be a response to a retransmitted packet, and
@@ -366,7 +366,8 @@ void UDPPort::OnReadPacket(rtc::AsyncPacketSocket* socket,
   }
 
   if (Connection* conn = GetConnection(remote_addr)) {
-    conn->OnReadPacket(data, size, packet_time);
+    RTC_LOG_F(LS_INFO) << "I am here";
+    conn->OnReadPacket(data, size, packet_time, tc);
   } else {
     Port::OnReadPacket(data, size, remote_addr, PROTO_UDP);
   }

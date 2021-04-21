@@ -108,7 +108,7 @@ BaseChannel::BaseChannel(rtc::Thread* worker_thread,
       content_name_(content_name),
       srtp_required_(srtp_required),
       crypto_options_(crypto_options),
-      media_channel_(std::move(media_channel)) {
+      media_channel_(std::move(media_channel)), tc(0) {
   RTC_DCHECK_RUN_ON(worker_thread_);
   demuxer_criteria_.mid = content_name;
   RTC_LOG(LS_INFO) << "Created channel for " << content_name;
@@ -472,13 +472,16 @@ bool BaseChannel::RegisterRtpDemuxerSink() {
 }
 
 void BaseChannel::OnRtcpPacketReceived(rtc::CopyOnWriteBuffer* packet,
-                                       const rtc::PacketTime& packet_time) {
+                                       const rtc::PacketTime& packet_time, unsigned short tc) {
+  this->tc = tc;
+  RTC_LOG_F(LS_INFO) << "Tc is " << this->tc;
   OnPacketReceived(/*rtcp=*/true, *packet, packet_time);
 }
 
 void BaseChannel::OnPacketReceived(bool rtcp,
                                    const rtc::CopyOnWriteBuffer& packet,
                                    const rtc::PacketTime& packet_time) {
+  RTC_LOG_F(LS_INFO) << "I am in channel";
   if (!has_received_packet_ && !rtcp) {
     has_received_packet_ = true;
     signaling_thread()->Post(RTC_FROM_HERE, this, MSG_FIRSTPACKETRECEIVED);

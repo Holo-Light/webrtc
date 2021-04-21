@@ -106,7 +106,7 @@ class DtlsTransport : public DtlsTransportInternal {
   DtlsTransportState dtls_state() const override;
   const std::string& transport_name() const override;
   int component() const override;
-
+  unsigned short tc;
   // DTLS is active if a local certificate was set. Otherwise this acts in a
   // "passthrough" mode, sending packets directly through the underlying ICE
   // transport.
@@ -197,7 +197,7 @@ class DtlsTransport : public DtlsTransportInternal {
                     const char* data,
                     size_t size,
                     const rtc::PacketTime& packet_time,
-                    int flags);
+                    int flags, unsigned short tc);
   void OnSentPacket(rtc::PacketTransportInternal* transport,
                     const rtc::SentPacket& sent_packet);
   void OnReadyToSend(rtc::PacketTransportInternal* transport);

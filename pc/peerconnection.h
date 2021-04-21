@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "api/peerconnectioninterface.h"
+#include "media/sctp/sctptransport.h"
 #include "api/turncustomizer.h"
 #include "pc/iceserverparsing.h"
 #include "pc/jseptransportcontroller.h"
@@ -155,6 +156,8 @@ class PeerConnection : public PeerConnectionInternal,
   const SessionDescriptionInterface* pending_local_description() const override;
   const SessionDescriptionInterface* pending_remote_description()
       const override;
+  const cricket::SctpTransportInternal* GetSctpTransportInternal() const;
+
 
   // JSEP01
   void CreateOffer(CreateSessionDescriptionObserver* observer,
@@ -858,7 +861,12 @@ class PeerConnection : public PeerConnectionInternal,
   void OnTransportControllerCandidatesRemoved(
       const std::vector<cricket::Candidate>& candidates);
   void OnTransportControllerDtlsHandshakeError(rtc::SSLHandshakeError error);
-
+  void OnTransportControllerSignalReadPacket(webrtc::JsepTransportController* controller,
+                                 const char* data,
+                                 size_t len,
+                                 const rtc::PacketTime& packet_time,
+                                 int flags);
+  void OnRtpDataChannelEcnBits(unsigned short tc);
   const char* SessionErrorToString(SessionError error) const;
   std::string GetSessionErrorMsg();
 

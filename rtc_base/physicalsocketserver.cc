@@ -43,6 +43,16 @@
 #include <algorithm>
 #include <map>
 
+#include "ecn-stuff/ecn-bitw.h"  // from ECN-Bits library, add to include path
+#include <stdio.h>     // for testing only, remove later
+#include "ecn-stuff/stoaf.c"  // from ECN-Bits library, add to include path
+#include "ecn-stuff/prep.c"  // from ECN-Bits library, add to include path
+#include "ecn-stuff/recvfrom.c"  // from ECN-Bits library, add to include path
+#include "ecn-stuff/recvmsg.c"  // from ECN-Bits library, add to include path
+#include "ecn-stuff/rdmsg.c"  // from ECN-Bits library, add to include path
+#include "ecn-stuff/recv.c"  // from ECN-Bits library, add to include path
+#include "ecn-stuff/short.c"  // from ECN-Bits library, add to include path
+
 #include "rtc_base/arraysize.h"
 #include "rtc_base/byteorder.h"
 #include "rtc_base/checks.h"
@@ -134,6 +144,13 @@ PhysicalSocket::PhysicalSocket(PhysicalSocketServer* ss, SOCKET s)
         getsockopt(s_, SOL_SOCKET, SO_TYPE, (SockOptArg)&type, &len);
     RTC_DCHECK_EQ(0, res);
     udp_ = (SOCK_DGRAM == type);
+    if (udp_) {
+      if (ECNBITS_PREP_FATAL(::ecnbits_prep(s_, ::ecnbits_stoaf(s)))) // instead of the parameter there was a variable named "family"...but was not declared
+      //  fprintf(stderr, "ECN-Bits error (PhysicalSocket): cannot initialise socket %I64 : %08X", (unsigned __int64)s_, WSAGetLastError());
+      fprintf(stderr, "ECN-Bits error (PhysicalSocket): cannot initialise socket");RTC_LOG_F(LS_INFO) << "ECN-Bits error (PhysicalSocket::Create): cannot initialise socket";
+    } else {
+      RTC_LOG_F(LS_INFO) << "(PhysicalSocket) ECN-Bits Successfully prep (new .dll)";
+    }
   }
 }
 
@@ -146,6 +163,16 @@ bool PhysicalSocket::Create(int family, int type) {
   s_ = ::socket(family, type, 0);
   udp_ = (SOCK_DGRAM == type);
   UpdateLastError();
+  if (udp_ && s_ != INVALID_SOCKET) {
+    if (ECNBITS_PREP_FATAL(::ecnbits_prep(s_, family))) {
+      //fprintf(stderr, "ECN-Bits error (PhysicalSocket::Create): cannot initialise socket %I64: %08X", (unsigned __int64)s_, WSAGetLastError());
+      fprintf(stderr, "ECN-Bits error (PhysicalSocket::Create): cannot initialise socket");
+      RTC_LOG_F(LS_INFO) << "ECN-Bits error (PhysicalSocket::Create): cannot initialise socket";
+    } else {
+
+      RTC_LOG_F(LS_INFO) << "ECN-Bits Successfully prep (new .dll)";
+    }
+  }
   if (udp_) {
     SetEnabledEvents(DE_READ | DE_WRITE);
   }
@@ -371,7 +398,8 @@ int PhysicalSocket::SendTo(const void* buffer,
 }
 
 int PhysicalSocket::Recv(void* buffer, size_t length, int64_t* timestamp) {
-  int received =
+  unsigned short tc;
+  int received = udp_ ? ::ecnbits_recv(s_, (char*)buffer, length, 0, &tc) :
       ::recv(s_, static_cast<char*>(buffer), static_cast<int>(length), 0);
   if ((received == 0) && (length != 0)) {
     // Note: on graceful shutdown, recv can return 0.  In this case, we
@@ -388,6 +416,10 @@ int PhysicalSocket::Recv(void* buffer, size_t length, int64_t* timestamp) {
     *timestamp = GetSocketRecvTimestamp(s_);
   }
   UpdateLastError();
+  if (udp_ && received >= 0)
+   // ECNBITS_DESC(tc) is "ECNBITS_VALID(tc) ? okstring[ECNBITS_BITS(tc)] : errorstring"
+   // fprintf(stderr, "ECN-Bits info (PhysicalSocket::Recv): received packet on %I64: %s\n", (unsigned __int64)s_, ECNBITS_DESC(tc));
+    RTC_LOG_F(LS_INFO) << "ECN-Bits info received packet on " << (unsigned __int64)s_ << " ECNBITS_DESC " << ECNBITS_DESC(tc) << " ECNBITS VALID " << ECNBITS_VALID(tc);
   int error = GetError();
   bool success = (received >= 0) || IsBlockingError(error);
   if (udp_ || success) {
@@ -402,17 +434,26 @@ int PhysicalSocket::Recv(void* buffer, size_t length, int64_t* timestamp) {
 int PhysicalSocket::RecvFrom(void* buffer,
                              size_t length,
                              SocketAddress* out_addr,
-                             int64_t* timestamp) {
+                             int64_t* timestamp, unsigned short* tc) {
   sockaddr_storage addr_storage;
   socklen_t addr_len = sizeof(addr_storage);
   sockaddr* addr = reinterpret_cast<sockaddr*>(&addr_storage);
-  int received = ::recvfrom(s_, static_cast<char*>(buffer),
-                            static_cast<int>(length), 0, addr, &addr_len);
+//unsigned short tc;
+   int received =
+      udp_ ? ::ecnbits_recvfrom(s_, (char*)buffer, length, 0, addr, &addr_len, tc) :
+       ::recvfrom(s_, static_cast<char*>(buffer),
+                             static_cast<int>(length), 0, addr, &addr_len);
   if (timestamp) {
     *timestamp = GetSocketRecvTimestamp(s_);
   }
   UpdateLastError();
-  if ((received >= 0) && (out_addr != nullptr))
+  if (udp_ && received >= 0)
+    // ECNBITS_DESC(tc) is "ECNBITS_VALID(tc) ? okstring[ECNBITS_BITS(tc)] : errorstring"
+  //  fprintf(stderr, "ECN-Bits info (PhysicalSocket::RecvFrom): received packet on %I64: %s\n", (unsigned __int64)s_, ECNBITS_DESC(tc));
+    //fprintf(stderr, "ECN-Bits info (PhysicalSocket::RecvFrom): received packet on");
+    RTC_LOG_F(LS_INFO) << "Value of tc in physicalsocketserver.cc is " << *tc;
+    RTC_LOG_F(LS_INFO) << "ECN-Bits info received packet on " << (unsigned __int64)s_ << " ECNBITS_DESC " << ECNBITS_DESC(*tc) << " ECNBITS VALID " << ECNBITS_VALID(*tc);
+    if ((received >= 0) && (out_addr != nullptr))
     SocketAddressFromSockAddrStorage(addr_storage, out_addr);
   int error = GetError();
   bool success = (received >= 0) || IsBlockingError(error);
