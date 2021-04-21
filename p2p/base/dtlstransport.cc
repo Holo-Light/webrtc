@@ -121,11 +121,7 @@ DtlsTransport::DtlsTransport(IceTransportInternal* ice_transport,
       downward_(NULL),
       srtp_ciphers_(GetSupportedDtlsSrtpCryptoSuites(crypto_options)),
       ssl_max_version_(rtc::SSL_PROTOCOL_DTLS_12),
-<<<<<<< HEAD
       crypto_options_(crypto_options){
-=======
-      crypto_options_(crypto_options), tc(0) {
->>>>>>> fb4939279d70f7642660a29cd181ba321a85bac0
   RTC_DCHECK(ice_transport_);
   ConnectToIceTransport();
 }
@@ -140,11 +136,7 @@ DtlsTransport::DtlsTransport(
       downward_(NULL),
       srtp_ciphers_(GetSupportedDtlsSrtpCryptoSuites(crypto_options)),
       ssl_max_version_(rtc::SSL_PROTOCOL_DTLS_12),
-<<<<<<< HEAD
       crypto_options_(crypto_options){
-=======
-      crypto_options_(crypto_options), tc(0) {
->>>>>>> fb4939279d70f7642660a29cd181ba321a85bac0
   RTC_DCHECK(owned_ice_transport_);
   ConnectToIceTransport();
 }
