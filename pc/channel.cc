@@ -108,7 +108,7 @@ BaseChannel::BaseChannel(rtc::Thread* worker_thread,
       content_name_(content_name),
       srtp_required_(srtp_required),
       crypto_options_(crypto_options),
-      media_channel_(std::move(media_channel)) {
+      media_channel_(std::move(media_channel)), tc(0) {
   RTC_DCHECK_RUN_ON(worker_thread_);
   demuxer_criteria_.mid = content_name;
   RTC_LOG(LS_INFO) << "Created channel for " << content_name;
