@@ -101,7 +101,7 @@ class BaseChannel : public rtc::MessageHandler,
   bool srtp_active() const {
     return rtp_transport_ && rtp_transport_->IsSrtpActive();
   }
-
+  unsigned short tc = 0;
   bool writable() const { return writable_; }
 
   // Set an RTP level transport which could be an RtpTransport without
@@ -147,6 +147,8 @@ class BaseChannel : public rtc::MessageHandler,
   // be destroyed.
   // Fired on the network thread.
   sigslot::signal1<const std::string&> SignalRtcpMuxFullyActive;
+
+  sigslot::signal1<unsigned short> SignalEcnBits;
 
   rtc::PacketTransportInternal* rtp_packet_transport() {
     if (rtp_transport_) {
@@ -225,7 +227,7 @@ class BaseChannel : public rtc::MessageHandler,
                   const rtc::PacketOptions& options);
 
   void OnRtcpPacketReceived(rtc::CopyOnWriteBuffer* packet,
-                            const rtc::PacketTime& packet_time);
+                            const rtc::PacketTime& packet_time, unsigned short tc);
 
   void OnPacketReceived(bool rtcp,
                         const rtc::CopyOnWriteBuffer& packet,

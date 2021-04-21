@@ -60,7 +60,7 @@ class OpenSSLAdapter : public SSLAdapter, public MessageHandler {
   int RecvFrom(void* pv,
                size_t cb,
                SocketAddress* paddr,
-               int64_t* timestamp) override;
+               int64_t* timestamp, unsigned short* tc) override;
   int Close() override;
   // Note that the socket returns ST_CONNECTING while SSL is being negotiated.
   ConnState GetState() const override;

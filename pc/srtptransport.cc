@@ -216,7 +216,7 @@ void SrtpTransport::OnRtpPacketReceived(rtc::CopyOnWriteBuffer* packet,
 }
 
 void SrtpTransport::OnRtcpPacketReceived(rtc::CopyOnWriteBuffer* packet,
-                                         const rtc::PacketTime& packet_time) {
+                                         const rtc::PacketTime& packet_time, unsigned short tc) {
   if (!IsSrtpActive()) {
     RTC_LOG(LS_WARNING)
         << "Inactive SRTP transport received an RTCP packet. Drop it.";
@@ -233,7 +233,7 @@ void SrtpTransport::OnRtcpPacketReceived(rtc::CopyOnWriteBuffer* packet,
     return;
   }
   packet->SetSize(len);
-  SignalRtcpPacketReceived(packet, packet_time);
+  SignalRtcpPacketReceived(packet, packet_time, tc);
 }
 
 void SrtpTransport::OnNetworkRouteChanged(

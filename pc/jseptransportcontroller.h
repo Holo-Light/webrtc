@@ -285,6 +285,8 @@ class JsepTransportController : public sigslot::has_slots<> {
                                       const cricket::Candidates& candidates);
   void OnTransportRoleConflict_n(cricket::IceTransportInternal* transport);
   void OnTransportStateChanged_n(cricket::IceTransportInternal* transport);
+  //void OnSignalReadPacket(rtc::PacketTransportInternal* transport, const char* data, size_t len, const rtc::PacketTime&,
+  //                 int)
 
   void UpdateAggregateStates_n();
 

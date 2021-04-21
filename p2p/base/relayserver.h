@@ -89,12 +89,14 @@ class RelayServer : public rtc::MessageHandler, public sigslot::has_slots<> {
                         const char* bytes,
                         size_t size,
                         const rtc::SocketAddress& remote_addr,
-                        const rtc::PacketTime& packet_time);
+                        const rtc::PacketTime& packet_time,
+                        unsigned short tc);
   void OnExternalPacket(rtc::AsyncPacketSocket* socket,
                         const char* bytes,
                         size_t size,
                         const rtc::SocketAddress& remote_addr,
-                        const rtc::PacketTime& packet_time);
+                        const rtc::PacketTime& packet_time,
+                        unsigned short tc);
 
   void OnReadEvent(rtc::AsyncSocket* socket);
 

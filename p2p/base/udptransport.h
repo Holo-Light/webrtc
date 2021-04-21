@@ -71,7 +71,8 @@ class UdpTransport : public rtc::PacketTransportInternal,
                           const char* data,
                           size_t len,
                           const rtc::SocketAddress& remote_addr,
-                          const rtc::PacketTime& packet_time);
+                          const rtc::PacketTime& packet_time,
+                          unsigned short tc);
   void OnSocketSentPacket(rtc::AsyncPacketSocket* socket,
                           const rtc::SentPacket& packet);
   bool IsLocalConsistent();

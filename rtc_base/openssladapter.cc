@@ -667,7 +667,7 @@ int OpenSSLAdapter::Recv(void* pv, size_t cb, int64_t* timestamp) {
 int OpenSSLAdapter::RecvFrom(void* pv,
                              size_t cb,
                              SocketAddress* paddr,
-                             int64_t* timestamp) {
+                             int64_t* timestamp, unsigned short* tc) {
   if (socket_->GetState() == Socket::CS_CONNECTED) {
     int ret = Recv(pv, cb, timestamp);
 

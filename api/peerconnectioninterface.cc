@@ -198,6 +198,7 @@ PeerConnectionFactoryInterface::CreatePeerConnection(
     std::unique_ptr<cricket::PortAllocator> allocator,
     std::unique_ptr<rtc::RTCCertificateGeneratorInterface> cert_generator,
     PeerConnectionObserver* observer) {
+      RTC_LOG_F(LS_INFO) << "I am in interface";
   return nullptr;
 }
 

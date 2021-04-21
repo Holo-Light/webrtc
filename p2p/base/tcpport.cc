@@ -307,7 +307,8 @@ void TCPPort::OnReadPacket(rtc::AsyncPacketSocket* socket,
                            const char* data,
                            size_t size,
                            const rtc::SocketAddress& remote_addr,
-                           const rtc::PacketTime& packet_time) {
+                           const rtc::PacketTime& packet_time,
+                           unsigned short tc) {
   Port::OnReadPacket(data, size, remote_addr, PROTO_TCP);
 }
 
@@ -535,9 +536,10 @@ void TCPConnection::OnReadPacket(rtc::AsyncPacketSocket* socket,
                                  const char* data,
                                  size_t size,
                                  const rtc::SocketAddress& remote_addr,
-                                 const rtc::PacketTime& packet_time) {
+                                 const rtc::PacketTime& packet_time,
+                                 unsigned short tc) {
   RTC_DCHECK(socket == socket_.get());
-  Connection::OnReadPacket(data, size, packet_time);
+  Connection::OnReadPacket(data, size, packet_time, tc);
 }
 
 void TCPConnection::OnReadyToSend(rtc::AsyncPacketSocket* socket) {

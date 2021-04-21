@@ -241,17 +241,17 @@ void RtpTransport::OnRtpPacketReceived(rtc::CopyOnWriteBuffer* packet,
 }
 
 void RtpTransport::OnRtcpPacketReceived(rtc::CopyOnWriteBuffer* packet,
-                                        const rtc::PacketTime& packet_time) {
-  SignalRtcpPacketReceived(packet, packet_time);
+                                        const rtc::PacketTime& packet_time, unsigned short tc) {
+  SignalRtcpPacketReceived(packet, packet_time, tc);
 }
 
 void RtpTransport::OnReadPacket(rtc::PacketTransportInternal* transport,
                                 const char* data,
                                 size_t len,
                                 const rtc::PacketTime& packet_time,
-                                int flags) {
+                                int flags, unsigned short tc) {
   TRACE_EVENT0("webrtc", "RtpTransport::OnReadPacket");
-
+  RTC_LOG_F(LS_INFO) << "I have received the packet in rtp and tc is " << tc;
   // When using RTCP multiplexing we might get RTCP packets on the RTP
   // transport. We check the RTP payload type to determine if it is RTCP.
   bool rtcp =
@@ -272,8 +272,10 @@ void RtpTransport::OnReadPacket(rtc::PacketTransportInternal* transport,
   }
 
   if (rtcp) {
-    OnRtcpPacketReceived(&packet, packet_time);
+    RTC_LOG_F(LS_INFO) << "I am in if branch";
+    OnRtcpPacketReceived(&packet, packet_time, tc);
   } else {
+    RTC_LOG_F(LS_INFO) << "I am in else branch";
     OnRtpPacketReceived(&packet, packet_time);
   }
 }

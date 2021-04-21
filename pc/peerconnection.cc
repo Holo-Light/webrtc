@@ -9,6 +9,8 @@
  */
 
 #include "pc/peerconnection.h"
+#include "pc/test/fakesctptransport.h"
+#include "media/sctp/sctptransport.h"
 
 #include <algorithm>
 #include <limits>
@@ -42,6 +44,7 @@
 #include "pc/streamcollection.h"
 #include "pc/videocapturertracksource.h"
 #include "pc/videotrack.h"
+#include "pc/test/fakesctptransport.h"
 #include "rtc_base/bind.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
@@ -949,7 +952,10 @@ bool PeerConnection::Initialize(
       this, &PeerConnection::OnTransportControllerCandidatesRemoved);
   transport_controller_->SignalDtlsHandshakeError.connect(
       this, &PeerConnection::OnTransportControllerDtlsHandshakeError);
-
+  //rtp_data_channel_->SignalEcnBits.connect(
+      //this, &PeerConnection::OnRtpDataChannelEcnBits);
+  //transport_controller_->SignalReadPacket.connect(
+      //this, &PeerConnection::OnTransportControllerSignalReadPacket);
   sctp_factory_ = factory_->CreateSctpTransportInternalFactory();
 
   stats_.reset(new StatsCollector(this));
@@ -3200,6 +3206,10 @@ const SessionDescriptionInterface* PeerConnection::pending_remote_description()
   return pending_remote_description_.get();
 }
 
+ const cricket::SctpTransportInternal* PeerConnection::GetSctpTransportInternal() const {
+   return sctp_transport_.get();
+ }
+
 void PeerConnection::Close() {
   TRACE_EVENT0("webrtc", "PeerConnection::Close");
   // Update stats here so that we have the most recent stats for tracks and
@@ -5299,6 +5309,18 @@ void PeerConnection::OnTransportControllerDtlsHandshakeError(
       static_cast<int>(rtc::SSLHandshakeError::MAX_VALUE));
 }
 
+void PeerConnection::OnTransportControllerSignalReadPacket(webrtc::JsepTransportController* controller,
+                                 const char* data,
+                                 size_t len,
+                                 const rtc::PacketTime& packet_time,
+                                 int flags) {
+                                   RTC_LOG_F(LS_INFO) << "I am where I really have to be";
+                                 }
+
+void PeerConnection::OnRtpDataChannelEcnBits(unsigned short tc) {
+  RTC_LOG_F(LS_INFO) << "Ecn finally is " << tc;
+}
+
 void PeerConnection::EnableSending() {
   for (auto transceiver : transceivers_) {
     cricket::BaseChannel* channel = transceiver->internal()->channel();
@@ -5570,6 +5592,10 @@ bool PeerConnection::CreateSctpTransport_n(const std::string& mid) {
       transport_controller_->GetDtlsTransport(mid);
   RTC_DCHECK(dtls_transport);
   sctp_transport_ = sctp_factory_->CreateSctpTransport(dtls_transport);
+  if(cricket::SctpTransport* kurec = dynamic_cast<cricket::SctpTransport*>(sctp_transport_.get())) {
+    RTC_LOG_F(LS_INFO) << "It worked!!!";
+  }
+  RTC_LOG_F(LS_INFO) << static_cast<cricket::SctpTransport*> (sctp_transport_.get());
   RTC_DCHECK(sctp_transport_);
   sctp_invoker_.reset(new rtc::AsyncInvoker());
   sctp_transport_->SignalReadyToSendData.connect(
@@ -6216,6 +6242,9 @@ bool PeerConnection::OnTransportChanged(
     cricket::DtlsTransportInternal* dtls_transport) {
   bool ret = true;
   auto base_channel = GetChannel(mid);
+  if(cricket::DtlsTransport* transport_casted = dynamic_cast<cricket::DtlsTransport*> (dtls_transport)) {
+    RTC_LOG_F(LS_INFO) << "Transport is successfully casted and tc is ";
+  }
   if (base_channel) {
     ret = base_channel->SetRtpTransport(rtp_transport);
   }

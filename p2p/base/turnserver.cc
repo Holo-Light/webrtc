@@ -201,7 +201,8 @@ void TurnServer::OnInternalSocketClose(rtc::AsyncPacketSocket* socket,
 void TurnServer::OnInternalPacket(rtc::AsyncPacketSocket* socket,
                                   const char* data, size_t size,
                                   const rtc::SocketAddress& addr,
-                                  const rtc::PacketTime& packet_time) {
+                                  const rtc::PacketTime& packet_time,
+                                  unsigned short tc) {
   RTC_DCHECK(thread_checker_.CalledOnValidThread());
   // Fail if the packet is too small to even contain a channel header.
   if (size < TURN_CHANNEL_HEADER_SIZE) {
@@ -209,6 +210,7 @@ void TurnServer::OnInternalPacket(rtc::AsyncPacketSocket* socket,
   }
   InternalSocketMap::iterator iter = server_sockets_.find(socket);
   RTC_DCHECK(iter != server_sockets_.end());
+  RTC_LOG_F(LS_INFO) << "Packet read in TurnServer::OnInternalPacket";
   TurnServerConnection conn(addr, iter->second, socket);
   uint16_t msg_type = rtc::GetBE16(data);
   if (!IsTurnChannelData(msg_type)) {
@@ -844,9 +846,11 @@ void TurnServerAllocation::OnExternalPacket(
     rtc::AsyncPacketSocket* socket,
     const char* data, size_t size,
     const rtc::SocketAddress& addr,
-    const rtc::PacketTime& packet_time) {
+    const rtc::PacketTime& packet_time,
+    unsigned short tc) {
   RTC_DCHECK(external_socket_.get() == socket);
   Channel* channel = FindChannel(addr);
+  RTC_LOG_F(LS_INFO) << "Packet read in relayServer::OnExternalPacket";
   if (channel) {
     // There is a channel bound to this address. Send as a channel message.
     rtc::ByteBufferWriter buf;

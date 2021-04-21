@@ -82,11 +82,11 @@ class PacketTransportInternal : public virtual webrtc::PacketTransportInterface,
   sigslot::signal1<PacketTransportInternal*> SignalReceivingState;
 
   // Signalled each time a packet is received on this channel.
-  sigslot::signal5<PacketTransportInternal*,
+  sigslot::signal6<PacketTransportInternal*,
                    const char*,
                    size_t,
                    const rtc::PacketTime&,
-                   int>
+                   int, unsigned short>
       SignalReadPacket;
 
   // Signalled each time a packet is sent on this channel.

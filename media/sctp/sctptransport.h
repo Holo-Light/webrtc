@@ -83,7 +83,7 @@ class SctpTransport : public SctpTransportInternal,
   void set_debug_name_for_testing(const char* debug_name) override {
     debug_name_ = debug_name;
   }
-
+  unsigned short tc = 0;
   // Exposed to allow Post call from c-callbacks.
   // TODO(deadbeef): Remove this or at least make it return a const pointer.
   rtc::Thread* network_thread() const { return network_thread_; }
@@ -114,7 +114,7 @@ class SctpTransport : public SctpTransportInternal,
                             const char* data,
                             size_t len,
                             const rtc::PacketTime& packet_time,
-                            int flags);
+                            int flags, unsigned short tc);
 
   // Methods related to usrsctp callbacks.
   void OnSendThresholdCallback();

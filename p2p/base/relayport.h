@@ -92,7 +92,8 @@ class RelayPort : public Port {
                     size_t size,
                     const rtc::SocketAddress& remote_addr,
                     ProtocolType proto,
-                    const rtc::PacketTime& packet_time);
+                    const rtc::PacketTime& packet_time,
+                    unsigned short tc);
 
   // The OnSentPacket callback is left empty here since they are handled by
   // RelayEntry.

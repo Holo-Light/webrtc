@@ -447,7 +447,7 @@ void BasicPortAllocatorSession::Regather(
 
   if (allocation_started_ && network_manager_started_ && !IsStopped()) {
     SignalIceRegathering(this, reason);
-
+    RTC_LOG_F(LS_INFO) << "And first call is from here";
     DoAllocate(disable_equivalent_phases);
   }
 }
@@ -554,6 +554,7 @@ void BasicPortAllocatorSession::OnMessage(rtc::Message* message) {
       break;
     case MSG_ALLOCATE:
       RTC_DCHECK(rtc::Thread::Current() == network_thread_);
+      RTC_LOG_F(LS_INFO) << "And now called from MSG_ALLOCATE";
       OnAllocate();
       break;
     case MSG_SEQUENCEOBJECTS_CREATED:
@@ -638,6 +639,7 @@ void BasicPortAllocatorSession::AllocatePorts() {
 void BasicPortAllocatorSession::OnAllocate() {
   if (network_manager_started_ && !IsStopped()) {
     bool disable_equivalent_phases = true;
+    RTC_LOG_F(LS_INFO) << "And first call is from here";
     DoAllocate(disable_equivalent_phases);
   }
 
@@ -781,6 +783,7 @@ void BasicPortAllocatorSession::DoAllocate(bool disable_equivalent) {
           new AllocationSequence(this, networks[i], config, sequence_flags);
       sequence->SignalPortAllocationComplete.connect(
           this, &BasicPortAllocatorSession::OnPortAllocationComplete);
+      RTC_LOG_F(LS_INFO) << "But before that I have to be here";
       sequence->Init();
       sequence->Start();
       sequences_.push_back(sequence);
@@ -818,6 +821,7 @@ void BasicPortAllocatorSession::OnNetworksChanged() {
       SignalIceRegathering(this, IceRegatheringReason::NETWORK_CHANGE);
     }
     bool disable_equivalent_phases = true;
+    RTC_LOG_F(LS_INFO) << "And first call is from here";
     DoAllocate(disable_equivalent_phases);
   }
 
@@ -1166,6 +1170,7 @@ AllocationSequence::AllocationSequence(BasicPortAllocatorSession* session,
 
 void AllocationSequence::Init() {
   if (IsFlagSet(PORTALLOCATOR_ENABLE_SHARED_SOCKET)) {
+    RTC_LOG_F(LS_INFO) << "I have to be here!!!";
     udp_socket_.reset(session_->socket_factory()->CreateUdpSocket(
         rtc::SocketAddress(network_->GetBestIP(), 0),
         session_->allocator()->min_port(), session_->allocator()->max_port()));
@@ -1533,11 +1538,12 @@ void AllocationSequence::OnReadPacket(rtc::AsyncPacketSocket* socket,
                                       const char* data,
                                       size_t size,
                                       const rtc::SocketAddress& remote_addr,
-                                      const rtc::PacketTime& packet_time) {
+                                      const rtc::PacketTime& packet_time,
+                                      unsigned short tc) {
   RTC_DCHECK(socket == udp_socket_.get());
 
   bool turn_port_found = false;
-
+  RTC_LOG_F(LS_INFO) << "I am here";
   // Try to find the TurnPort that matches the remote address. Note that the
   // message could be a STUN binding response if the TURN server is also used as
   // a STUN server. We don't want to parse every message here to check if it is
@@ -1547,7 +1553,7 @@ void AllocationSequence::OnReadPacket(rtc::AsyncPacketSocket* socket,
   for (auto* port : relay_ports_) {
     if (port->CanHandleIncomingPacketsFrom(remote_addr)) {
       if (port->HandleIncomingPacket(socket, data, size, remote_addr,
-                                     packet_time)) {
+                                     packet_time, tc)) {
         return;
       }
       turn_port_found = true;
@@ -1563,7 +1569,7 @@ void AllocationSequence::OnReadPacket(rtc::AsyncPacketSocket* socket,
         stun_servers.find(remote_addr) != stun_servers.end()) {
       RTC_DCHECK(udp_port_->SharedSocket());
       udp_port_->HandleIncomingPacket(socket, data, size, remote_addr,
-                                      packet_time);
+                                      packet_time, tc);
     }
   }
 }

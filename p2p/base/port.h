@@ -305,7 +305,8 @@ class Port : public PortInterface,
                                     const char* data,
                                     size_t size,
                                     const rtc::SocketAddress& remote_addr,
-                                    const rtc::PacketTime& packet_time);
+                                    const rtc::PacketTime& packet_time,
+                                    unsigned short tc);
 
   // Shall the port handle packet from this |remote_addr|.
   // This method is overridden by TurnPort.
@@ -581,7 +582,7 @@ class Connection : public CandidatePairInterface,
   // Error if Send() returns < 0
   virtual int GetError() = 0;
 
-  sigslot::signal4<Connection*, const char*, size_t, const rtc::PacketTime&>
+  sigslot::signal5<Connection*, const char*, size_t, const rtc::PacketTime&, unsigned short>
       SignalReadPacket;
 
   sigslot::signal1<Connection*> SignalReadyToSend;
@@ -589,7 +590,7 @@ class Connection : public CandidatePairInterface,
   // Called when a packet is received on this connection.
   void OnReadPacket(const char* data,
                     size_t size,
-                    const rtc::PacketTime& packet_time);
+                    const rtc::PacketTime& packet_time, unsigned short tc);
 
   // Called when the socket is currently able to send.
   void OnReadyToSend();

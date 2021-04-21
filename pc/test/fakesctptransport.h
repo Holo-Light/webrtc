@@ -14,6 +14,7 @@
 #include <memory>
 
 #include "media/sctp/sctptransportinternal.h"
+#include "media/sctp/sctptransport.h"
 
 // Used for tests in this file to verify that PeerConnection responds to signals
 // from the SctpTransport correctly, and calls Start with the correct

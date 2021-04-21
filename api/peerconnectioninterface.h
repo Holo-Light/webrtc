@@ -995,6 +995,9 @@ class PeerConnectionInterface : public rtc::RefCountInterface {
   virtual bool StartRtcEventLog(std::unique_ptr<RtcEventLogOutput> output,
                                 int64_t output_period_ms);
 
+  //virtual const cricket::SctpTransportInternal* GetSctpTransportInternal() const;
+
+
   // Stops logging the RtcEventLog.
   // TODO(ivoc): Make this pure virtual when Chrome is updated.
   virtual void StopRtcEventLog() {}
