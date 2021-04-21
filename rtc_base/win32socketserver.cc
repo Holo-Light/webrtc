@@ -471,16 +471,15 @@ int Win32Socket::Recv(void* buffer, size_t length, int64_t* timestamp) {
 int Win32Socket::RecvFrom(void* buffer,
                           size_t length,
                           SocketAddress* out_addr,
-                          int64_t* timestamp) {
+                          int64_t* timestamp, unsigned short* tc) {
   if (timestamp) {
     *timestamp = -1;
   }
   sockaddr_storage saddr;
   socklen_t addr_len = sizeof(saddr);
-  unsigned short tc;
   int received =
       ::ecnbits_recvfrom(socket_, buffer, length,
-                 0, reinterpret_cast<sockaddr*>(&saddr), &addr_len, &tc);
+                 0, reinterpret_cast<sockaddr*>(&saddr), &addr_len, tc);
   UpdateLastError();
     /* no check for UDP as Win32Socket does not remember whether it's UDP or not; for TCP it will just mark tc as invalid */
   if (received >= 0)

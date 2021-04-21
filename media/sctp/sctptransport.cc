@@ -372,8 +372,7 @@ SctpTransport::SctpTransport(rtc::Thread* network_thread,
                              rtc::PacketTransportInternal* transport)
     : network_thread_(network_thread),
       transport_(transport),
-      was_ever_writable_(transport->writable()),
-      tc(150) {
+      was_ever_writable_(transport->writable()) {
   RTC_DCHECK(network_thread_);
   RTC_DCHECK(transport_);
   RTC_DCHECK_RUN_ON(network_thread_);
@@ -849,7 +848,6 @@ void SctpTransport::OnPacketRead(rtc::PacketTransportInternal* transport,
                                  size_t len,
                                  const rtc::PacketTime& packet_time,
                                  int flags, unsigned short tc) {
-  RTC_RUN_ON(network_thread_);
   RTC_CHECK_EQ(transport_, transport);
   TRACE_EVENT0("webrtc", "SctpTransport::OnPacketRead");
   RTC_LOG_F(LS_INFO) << "I have received the packet in sctp";

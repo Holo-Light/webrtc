@@ -50,7 +50,7 @@ class Win32Socket : public AsyncSocket {
   int RecvFrom(void* buffer,
                size_t length,
                SocketAddress* out_addr,
-               int64_t* timestamp) override;
+               int64_t* timestamp, unsigned short* tc) override;
   int Listen(int backlog) override;
   Win32Socket* Accept(SocketAddress* out_addr) override;
   int Close() override;
