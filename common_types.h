@@ -421,6 +421,7 @@ struct XRTimestamp {
   float focus_x = 0;
   float focus_y = 0;
   float focus_z = 0;
+  int64_t Bandwith=0;
 };
 
 }  // namespace webrtc
