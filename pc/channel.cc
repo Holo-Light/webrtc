@@ -472,13 +472,16 @@ bool BaseChannel::RegisterRtpDemuxerSink() {
 }
 
 void BaseChannel::OnRtcpPacketReceived(rtc::CopyOnWriteBuffer* packet,
-                                       const rtc::PacketTime& packet_time) {
+                                       const rtc::PacketTime& packet_time, unsigned short tc) {
+  this->tc = tc;
+  RTC_LOG_F(LS_INFO) << "Tc is " << this->tc;
   OnPacketReceived(/*rtcp=*/true, *packet, packet_time);
 }
 
 void BaseChannel::OnPacketReceived(bool rtcp,
                                    const rtc::CopyOnWriteBuffer& packet,
                                    const rtc::PacketTime& packet_time) {
+  RTC_LOG_F(LS_INFO) << "I am in channel";
   if (!has_received_packet_ && !rtcp) {
     has_received_packet_ = true;
     signaling_thread()->Post(RTC_FROM_HERE, this, MSG_FIRSTPACKETRECEIVED);

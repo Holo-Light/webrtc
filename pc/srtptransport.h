@@ -115,7 +115,7 @@ class SrtpTransport : public RtpTransport {
   void OnRtpPacketReceived(rtc::CopyOnWriteBuffer* packet,
                            const rtc::PacketTime& packet_time) override;
   void OnRtcpPacketReceived(rtc::CopyOnWriteBuffer* packet,
-                            const rtc::PacketTime& packet_time) override;
+                            const rtc::PacketTime& packet_time, unsigned short tc) override;
   void OnNetworkRouteChanged(
       absl::optional<rtc::NetworkRoute> network_route) override;
 

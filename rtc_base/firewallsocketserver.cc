@@ -69,7 +69,7 @@ class FirewallSocket : public AsyncSocketAdapter {
                int64_t* timestamp) override {
     if (type_ == SOCK_DGRAM) {
       while (true) {
-        int res = AsyncSocketAdapter::RecvFrom(pv, cb, paddr, timestamp);
+        int res = AsyncSocketAdapter::RecvFrom(pv, cb, paddr, timestamp, 0);
         if (res <= 0)
           return res;
         if (server_->Check(FP_UDP, *paddr, GetLocalAddress()))
@@ -80,7 +80,7 @@ class FirewallSocket : public AsyncSocketAdapter {
             << GetLocalAddress().ToSensitiveString() << " dropped";
       }
     }
-    return AsyncSocketAdapter::RecvFrom(pv, cb, paddr, timestamp);
+    return AsyncSocketAdapter::RecvFrom(pv, cb, paddr, timestamp, 0);
   }
 
   int Listen(int backlog) override {

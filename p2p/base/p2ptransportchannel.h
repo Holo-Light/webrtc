@@ -295,7 +295,8 @@ class P2PTransportChannel : public IceTransportInternal {
   void OnReadPacket(Connection* connection,
                     const char* data,
                     size_t len,
-                    const rtc::PacketTime& packet_time);
+                    const rtc::PacketTime& packet_time,
+                    unsigned short tc);
   void OnSentPacket(const rtc::SentPacket& sent_packet);
   void OnReadyToSend(Connection* connection);
   void OnConnectionDestroyed(Connection* connection);

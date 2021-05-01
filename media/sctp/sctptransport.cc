@@ -847,11 +847,15 @@ void SctpTransport::OnPacketRead(rtc::PacketTransportInternal* transport,
                                  const char* data,
                                  size_t len,
                                  const rtc::PacketTime& packet_time,
-                                 int flags) {
-  RTC_DCHECK_RUN_ON(network_thread_);
-  RTC_DCHECK_EQ(transport_, transport);
+                                 int flags, unsigned short tc) {
+  RTC_CHECK_EQ(transport_, transport);
   TRACE_EVENT0("webrtc", "SctpTransport::OnPacketRead");
+  RTC_LOG_F(LS_INFO) << "I have received the packet in sctp";
+  if(tc != 0) {
 
+    this->tc = tc;
+    //RTC_LOG_F(LS_INFO) << "Packet read in sctp and tc is " << this->tc;
+  }
   if (flags & PF_SRTP_BYPASS) {
     // We are only interested in SCTP packets.
     return;

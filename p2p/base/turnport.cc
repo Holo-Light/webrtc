@@ -617,7 +617,8 @@ bool TurnPort::HandleIncomingPacket(rtc::AsyncPacketSocket* socket,
                                     const char* data,
                                     size_t size,
                                     const rtc::SocketAddress& remote_addr,
-                                    const rtc::PacketTime& packet_time) {
+                                    const rtc::PacketTime& packet_time,
+                                    unsigned short tc) {
   if (socket != socket_) {
     // The packet was received on a shared socket after we've allocated a new
     // socket for this TURN port.
@@ -690,8 +691,10 @@ void TurnPort::OnReadPacket(rtc::AsyncPacketSocket* socket,
                             const char* data,
                             size_t size,
                             const rtc::SocketAddress& remote_addr,
-                            const rtc::PacketTime& packet_time) {
-  HandleIncomingPacket(socket, data, size, remote_addr, packet_time);
+                            const rtc::PacketTime& packet_time,
+                            unsigned short tc) {
+  RTC_LOG_F(LS_INFO) << "Packet read in TurnPort";
+  HandleIncomingPacket(socket, data, size, remote_addr, packet_time, tc);
 }
 
 void TurnPort::OnSentPacket(rtc::AsyncPacketSocket* socket,
@@ -1013,7 +1016,7 @@ void TurnPort::DispatchPacket(const char* data,
                               ProtocolType proto,
                               const rtc::PacketTime& packet_time) {
   if (Connection* conn = GetConnection(remote_addr)) {
-    conn->OnReadPacket(data, size, packet_time);
+    conn->OnReadPacket(data, size, packet_time, 0);
   } else {
     Port::OnReadPacket(data, size, remote_addr, proto);
   }

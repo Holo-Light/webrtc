@@ -379,11 +379,13 @@ JsepTransportController::CreateDtlsTransport(const std::string& transport_name,
 
   std::unique_ptr<cricket::DtlsTransportInternal> dtls;
   if (config_.external_transport_factory) {
+    RTC_LOG_F(LS_INFO) << "I am in external transport factory";
     auto ice = config_.external_transport_factory->CreateIceTransport(
         transport_name, component);
     dtls = config_.external_transport_factory->CreateDtlsTransport(
         std::move(ice), config_.crypto_options);
   } else {
+    RTC_LOG_F(LS_INFO) << "I am in external transport factory";
     auto ice = absl::make_unique<cricket::P2PTransportChannel>(
         transport_name, component, port_allocator_, async_resolver_factory_,
         config_.event_log);
@@ -418,6 +420,10 @@ JsepTransportController::CreateDtlsTransport(const std::string& transport_name,
       this, &JsepTransportController::OnTransportRoleConflict_n);
   dtls->ice_transport()->SignalStateChanged.connect(
       this, &JsepTransportController::OnTransportStateChanged_n);
+  //if(cricket::P2PTransportChannel* transport_channel = dynamic_cast<cricket::P2PTransportChannel*> (dtls->ice_transport())) {
+  //  transport_channel->SignalReadPacket.connect(
+  //    this, &JsepTransportController::OnSignalReadPacket)
+  //}
   return dtls;
 }
 

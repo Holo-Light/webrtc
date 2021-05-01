@@ -189,11 +189,12 @@ void RelayServer::OnInternalPacket(rtc::AsyncPacketSocket* socket,
                                    const char* bytes,
                                    size_t size,
                                    const rtc::SocketAddress& remote_addr,
-                                   const rtc::PacketTime& packet_time) {
+                                   const rtc::PacketTime& packet_time,
+                                   unsigned short tc) {
   // Get the address of the connection we just received on.
   rtc::SocketAddressPair ap(remote_addr, socket->GetLocalAddress());
   RTC_DCHECK(!ap.destination().IsNil());
-
+  RTC_LOG_F(LS_INFO) << "Packet read in relayServer::OnInternalPacket";
   // If this did not come from an existing connection, it should be a STUN
   // allocate request.
   ConnectionMap::iterator piter = connections_.find(ap);
@@ -234,11 +235,12 @@ void RelayServer::OnExternalPacket(rtc::AsyncPacketSocket* socket,
                                    const char* bytes,
                                    size_t size,
                                    const rtc::SocketAddress& remote_addr,
-                                   const rtc::PacketTime& packet_time) {
+                                   const rtc::PacketTime& packet_time,
+                                   unsigned short tc) {
   // Get the address of the connection we just received on.
   rtc::SocketAddressPair ap(remote_addr, socket->GetLocalAddress());
   RTC_DCHECK(!ap.destination().IsNil());
-
+  RTC_LOG_F(LS_INFO) << "Packet read in relayServer::OnExternalPacket";
   // If this connection already exists, then forward the traffic.
   ConnectionMap::iterator piter = connections_.find(ap);
   if (piter != connections_.end()) {

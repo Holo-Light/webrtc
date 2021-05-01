@@ -2319,15 +2319,15 @@ bool P2PTransportChannel::PrunePort(PortInterface* port) {
 void P2PTransportChannel::OnReadPacket(Connection* connection,
                                        const char* data,
                                        size_t len,
-                                       const rtc::PacketTime& packet_time) {
-  RTC_DCHECK(network_thread_ == rtc::Thread::Current());
-
+                                       const rtc::PacketTime& packet_time,
+                                       unsigned short tc) {
+  RTC_CHECK(network_thread_ == rtc::Thread::Current());
   // Do not deliver, if packet doesn't belong to the correct transport channel.
   if (!FindConnection(connection))
     return;
 
   // Let the client know of an incoming packet
-  SignalReadPacket(this, data, len, packet_time, 0);
+  SignalReadPacket(this, data, len, packet_time, 0, tc);
 
   // May need to switch the sending connection based on the receiving media path
   // if this is the controlled side.

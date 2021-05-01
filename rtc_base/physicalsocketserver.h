@@ -162,7 +162,7 @@ class PhysicalSocket : public AsyncSocket, public sigslot::has_slots<> {
   int RecvFrom(void* buffer,
                size_t length,
                SocketAddress* out_addr,
-               int64_t* timestamp) override;
+               int64_t* timestamp, unsigned short* tc) override;
 
   int Listen(int backlog) override;
   AsyncSocket* Accept(SocketAddress* out_addr) override;
