@@ -93,8 +93,8 @@ class RtpTransportAdapter : public RtpTransportInternalAdapter {
   void OnReadyToSend(bool ready) { SignalReadyToSend(ready); }
 
   void OnRtcpPacketReceived(rtc::CopyOnWriteBuffer* packet,
-                            const rtc::PacketTime& time) {
-    SignalRtcpPacketReceived(packet, time);
+                            const rtc::PacketTime& time, unsigned short tc) {
+    SignalRtcpPacketReceived(packet, time, tc);
   }
 
   void OnWritableState(bool writable) { SignalWritableState(writable); }

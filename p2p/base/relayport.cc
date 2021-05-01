@@ -138,7 +138,8 @@ class RelayEntry : public rtc::MessageHandler, public sigslot::has_slots<> {
                     const char* data,
                     size_t size,
                     const rtc::SocketAddress& remote_addr,
-                    const rtc::PacketTime& packet_time);
+                    const rtc::PacketTime& packet_time,
+                    unsigned short tc);
 
   void OnSentPacket(rtc::AsyncPacketSocket* socket,
                     const rtc::SentPacket& sent_packet);
@@ -396,9 +397,10 @@ void RelayPort::OnReadPacket(const char* data,
                              size_t size,
                              const rtc::SocketAddress& remote_addr,
                              ProtocolType proto,
-                             const rtc::PacketTime& packet_time) {
+                             const rtc::PacketTime& packet_time,
+                             unsigned short tc) {
   if (Connection* conn = GetConnection(remote_addr)) {
-    conn->OnReadPacket(data, size, packet_time);
+    conn->OnReadPacket(data, size, packet_time, tc);
   } else {
     Port::OnReadPacket(data, size, remote_addr, proto);
   }
@@ -681,10 +683,11 @@ void RelayEntry::OnReadPacket(rtc::AsyncPacketSocket* socket,
                               const char* data,
                               size_t size,
                               const rtc::SocketAddress& remote_addr,
-                              const rtc::PacketTime& packet_time) {
+                              const rtc::PacketTime& packet_time,
+                              unsigned short tc) {
   // RTC_DCHECK(remote_addr == port_->server_addr());
   // TODO(?): are we worried about this?
-
+  RTC_LOG_F(LS_INFO) << "Packet read in relay entry";
   if (current_connection_ == NULL || socket != current_connection_->socket()) {
     // This packet comes from an unknown address.
     RTC_LOG(WARNING) << "Dropping packet: unknown address";
@@ -695,7 +698,7 @@ void RelayEntry::OnReadPacket(rtc::AsyncPacketSocket* socket,
   // by the server,  The actual remote address is the one we recorded.
   if (!port_->HasMagicCookie(data, size)) {
     if (locked_) {
-      port_->OnReadPacket(data, size, ext_addr_, PROTO_UDP, packet_time);
+      port_->OnReadPacket(data, size, ext_addr_, PROTO_UDP, packet_time, 0);
     } else {
       RTC_LOG(WARNING) << "Dropping packet: entry not locked";
     }
@@ -748,7 +751,7 @@ void RelayEntry::OnReadPacket(rtc::AsyncPacketSocket* socket,
 
   // Process the actual data and remote address in the normal manner.
   port_->OnReadPacket(data_attr->bytes(), data_attr->length(), remote_addr2,
-                      PROTO_UDP, packet_time);
+                      PROTO_UDP, packet_time, tc);
 }
 
 void RelayEntry::OnSentPacket(rtc::AsyncPacketSocket* socket,

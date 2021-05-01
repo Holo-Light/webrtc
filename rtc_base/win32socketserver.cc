@@ -13,10 +13,14 @@
 #include <ws2tcpip.h>  // NOLINT
 #include <algorithm>
 
+#include "ecn-stuff/ecn-bitw.h" // from ECN-Bits library, add to include path
+#include <stdio.h>     // for testing only, remove later
+
 #include "rtc_base/byteorder.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
 #include "rtc_base/win32window.h"
+#include "rtc_base/physicalsocketserver.cc" // this is needed for SockOptArg
 
 namespace rtc {
 
@@ -224,6 +228,17 @@ bool Win32Socket::CreateT(int family, int type) {
     UpdateLastError();
     return false;
   }
+
+  if (SOCK_DGRAM == type) {
+    if (ECNBITS_PREP_FATAL(::ecnbits_prep(socket_, family)))
+     // fprintf(stderr, "ECN-Bits error (Win32Socket::CreateT): cannot initialise socket %I64: %08X", (unsigned __int64)socket_, WSAGetLastError());
+      fprintf(stderr, "ECN-Bits error (Win32Socket::CreateT): cannot initialise socket");
+      RTC_LOG_F(LS_INFO) << "ECN-Bits error (PhysicalSocket::Create): cannot initialise socket";
+    } else {
+
+      RTC_LOG_F(LS_INFO) << "(Win32Socket::CreateT) ECN-Bits Successfully prep";
+    }
+
   if ((SOCK_DGRAM == type) && !SetAsync(FD_READ | FD_WRITE)) {
     return false;
   }
@@ -238,6 +253,24 @@ int Win32Socket::Attach(SOCKET s) {
   RTC_DCHECK(s != INVALID_SOCKET);
   if (s == INVALID_SOCKET)
     return SOCKET_ERROR;
+
+  /* find out whether this is a UDP socket; unfortunately, the calling semantics of Accept are not documented */
+  int type = SOCK_STREAM;
+  socklen_t len = sizeof(type);
+  const int res =
+      getsockopt(s, SOL_SOCKET, SO_TYPE, (SockOptArg)&type, &len);
+  RTC_DCHECK_EQ(0, res);
+  /* ECN-Bits works on UDP only */
+  if (SOCK_DGRAM == type) {
+    if (ECNBITS_PREP_FATAL(::ecnbits_prep(s, ::ecnbits_stoaf(s))))
+      //fprintf(stderr, "ECN-Bits error (Win32Socket::Attach): cannot initialise socket %I64: %08X", (unsigned __int64)s, WSAGetLastError());
+      fprintf(stderr, "ECN-Bits error (Win32Socket::Attach): cannot initialise socket");
+      RTC_LOG_F(LS_INFO) << "ECN-Bits error (PhysicalSocket::Create): cannot initialise socket";
+    } else {
+
+      RTC_LOG_F(LS_INFO) << "(Win32Socket::Attach) ECN-Bits Successfully prep";
+    }
+
 
   socket_ = s;
   state_ = CS_CONNECTED;
@@ -419,9 +452,17 @@ int Win32Socket::Recv(void* buffer, size_t length, int64_t* timestamp) {
   if (timestamp) {
     *timestamp = -1;
   }
+  unsigned short tc;
   int received =
-      ::recv(socket_, static_cast<char*>(buffer), static_cast<int>(length), 0);
+       ::ecnbits_recv(socket_, buffer, length, 0, &tc);
   UpdateLastError();
+  /* no check for UDP as Win32Socket does not remember whether it's UDP or not; for TCP it will just mark tc as invalid */
+  if (received >= 0)
+    // ECNBITS_DESC(tc) is "ECNBITS_VALID(tc) ? okstring[ECNBITS_BITS(tc)] : errorstring"
+   // fprintf(stderr, "ECN-Bits info (Win32Socket::Recv): received packet on %I64: %s\n", (unsigned __int64)socket_, ECNBITS_DESC(tc));
+    fprintf(stderr, "ECN-Bits info (Win32Socket::Recv): received packet on");
+    RTC_LOG_F(LS_INFO) << "ECN-Bits info (Win32Socket::Recv): received packet on" << (unsigned __int64)socket_ << " ECNBITS_DESC " << ECNBITS_DESC(tc) << " ECNBITS VALID " << ECNBITS_VALID(tc);
+
   if (closing_ && received <= static_cast<int>(length))
     PostClosed();
   return received;
@@ -430,16 +471,22 @@ int Win32Socket::Recv(void* buffer, size_t length, int64_t* timestamp) {
 int Win32Socket::RecvFrom(void* buffer,
                           size_t length,
                           SocketAddress* out_addr,
-                          int64_t* timestamp) {
+                          int64_t* timestamp, unsigned short* tc) {
   if (timestamp) {
     *timestamp = -1;
   }
   sockaddr_storage saddr;
   socklen_t addr_len = sizeof(saddr);
   int received =
-      ::recvfrom(socket_, static_cast<char*>(buffer), static_cast<int>(length),
-                 0, reinterpret_cast<sockaddr*>(&saddr), &addr_len);
+      ::ecnbits_recvfrom(socket_, buffer, length,
+                 0, reinterpret_cast<sockaddr*>(&saddr), &addr_len, tc);
   UpdateLastError();
+    /* no check for UDP as Win32Socket does not remember whether it's UDP or not; for TCP it will just mark tc as invalid */
+  if (received >= 0)
+    // ECNBITS_DESC(tc) is "ECNBITS_VALID(tc) ? okstring[ECNBITS_BITS(tc)] : errorstring"
+   // fprintf(stderr, "ECN-Bits info (Win32Socket::RecvFrom): received packet on %I64: %s\n", (unsigned __int64)socket_, ECNBITS_DESC(tc));
+    fprintf(stderr, "ECN-Bits info (Win32Socket::RecvFrom): received packet on");
+    RTC_LOG_F(LS_INFO) << "ECN-Bits info (Win32Socket::Recv): received packet on";
   if (received != SOCKET_ERROR)
     SocketAddressFromSockAddrStorage(saddr, out_addr);
   if (closing_ && received <= static_cast<int>(length))

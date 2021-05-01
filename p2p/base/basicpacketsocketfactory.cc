@@ -43,8 +43,9 @@ AsyncPacketSocket* BasicPacketSocketFactory::CreateUdpSocket(
     uint16_t min_port,
     uint16_t max_port) {
   // UDP sockets are simple.
+  RTC_LOG_F(LS_INFO) << "I am creating udp socket";
   AsyncSocket* socket =
-      socket_factory()->CreateAsyncSocket(address.family(), SOCK_DGRAM);
+       socket_factory()->CreateAsyncSocket(address.family(), SOCK_DGRAM);
   if (!socket) {
     return NULL;
   }

@@ -59,7 +59,7 @@ class RtpTransportInternal : public SrtpTransportInterface,
   // Called whenever an RTCP packet is received. There is no equivalent signal
   // for RTP packets because they would be forwarded to the BaseChannel through
   // the RtpDemuxer callback.
-  sigslot::signal2<rtc::CopyOnWriteBuffer*, const rtc::PacketTime&>
+  sigslot::signal3<rtc::CopyOnWriteBuffer*, const rtc::PacketTime&, unsigned short>
       SignalRtcpPacketReceived;
 
   // Called whenever the network route of the P2P layer transport changes.

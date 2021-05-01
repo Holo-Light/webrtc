@@ -116,11 +116,11 @@ class AsyncPacketSocket : public sigslot::has_slots<> {
 
   // Emitted each time a packet is read. Used only for UDP and
   // connected TCP sockets.
-  sigslot::signal5<AsyncPacketSocket*,
+  sigslot::signal6<AsyncPacketSocket*,
                    const char*,
                    size_t,
                    const SocketAddress&,
-                   const PacketTime&>
+                   const PacketTime&, unsigned short>
       SignalReadPacket;
 
   // Emitted each time a packet is sent.

@@ -28,6 +28,7 @@
 #include "pc/rtpparametersconversion.h"
 #include "rtc_base/bind.h"
 #include "rtc_base/checks.h"
+#include "rtc_base/logging.h"
 // Adding 'nogncheck' to disable the gn include headers check to support modular
 // WebRTC build targets.
 // TODO(zhihuang): This wouldn't be necessary if the interface and
@@ -386,6 +387,7 @@ PeerConnectionFactory::CreatePeerConnection(
   if (!pc->Initialize(configuration, std::move(dependencies))) {
     return nullptr;
   }
+  RTC_LOG_F(LS_INFO) << "I am in real class";
   return PeerConnectionProxy::Create(signaling_thread(), pc);
 }
 

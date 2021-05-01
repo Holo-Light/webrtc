@@ -119,9 +119,11 @@ void UdpTransport::OnSocketReadPacket(rtc::AsyncPacketSocket* socket,
                                       const char* data,
                                       size_t len,
                                       const rtc::SocketAddress& remote_addr,
-                                      const rtc::PacketTime& packet_time) {
+                                      const rtc::PacketTime& packet_time,
+                                      unsigned short tc) {
   // No thread_checker in high frequency network function.
-  SignalReadPacket(this, data, len, packet_time, 0);
+  RTC_LOG_F(LS_INFO) << "I am reading from socket!!!";
+  SignalReadPacket(this, data, len, packet_time, 0, tc);
 }
 
 void UdpTransport::OnSocketSentPacket(rtc::AsyncPacketSocket* socket,

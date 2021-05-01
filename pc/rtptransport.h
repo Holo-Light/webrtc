@@ -100,7 +100,7 @@ class RtpTransport : public RtpTransportInternal {
   virtual void OnRtpPacketReceived(rtc::CopyOnWriteBuffer* packet,
                                    const rtc::PacketTime& packet_time);
   virtual void OnRtcpPacketReceived(rtc::CopyOnWriteBuffer* packet,
-                                    const rtc::PacketTime& packet_time);
+                                    const rtc::PacketTime& packet_time, unsigned short tc);
   // Overridden by SrtpTransport and DtlsSrtpTransport.
   virtual void OnWritableState(rtc::PacketTransportInternal* packet_transport);
 
@@ -112,7 +112,7 @@ class RtpTransport : public RtpTransportInternal {
                     const char* data,
                     size_t len,
                     const rtc::PacketTime& packet_time,
-                    int flags);
+                    int flags, unsigned short tc);
 
   // Updates "ready to send" for an individual channel and fires
   // SignalReadyToSend.

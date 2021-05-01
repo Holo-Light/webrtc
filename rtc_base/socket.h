@@ -190,7 +190,7 @@ class Socket {
   virtual int RecvFrom(void* pv,
                        size_t cb,
                        SocketAddress* paddr,
-                       int64_t* timestamp) = 0;
+                       int64_t* timestamp, unsigned short* tc) = 0;
   virtual int Listen(int backlog) = 0;
   virtual Socket* Accept(SocketAddress* paddr) = 0;
   virtual int Close() = 0;

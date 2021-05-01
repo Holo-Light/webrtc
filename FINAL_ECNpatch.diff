@@ -1,0 +1,1100 @@
+From c8bdb2639e8729706ddb9fbed07c9e479126357f Mon Sep 17 00:00:00 2001
+From: Norair <n.mikaelyan@holo-light.com>
+Date: Mon, 7 Dec 2020 15:32:14 +0100
+Subject: [PATCH] ecn bits working
+
+---
+ rtc_base/ecn-stuff/desc.c        |  27 +++++
+ rtc_base/ecn-stuff/ecn-bitw.h    | 123 ++++++++++++++++++++
+ rtc_base/ecn-stuff/prep.c        |  66 +++++++++++
+ rtc_base/ecn-stuff/rdmsg.c       | 188 +++++++++++++++++++++++++++++++
+ rtc_base/ecn-stuff/recv.c        |  65 +++++++++++
+ rtc_base/ecn-stuff/recvfrom.c    |  81 +++++++++++++
+ rtc_base/ecn-stuff/recvmsg.c     |  71 ++++++++++++
+ rtc_base/ecn-stuff/short.c       |  27 +++++
+ rtc_base/ecn-stuff/stoaf.c       |  57 ++++++++++
+ rtc_base/ecn-stuff/winrecv.c     |  56 +++++++++
+ rtc_base/ecn-stuff/winsend.c     |  39 +++++++
+ rtc_base/physicalsocketserver.cc |  48 +++++++-
+ rtc_base/win32socketserver.cc    |  54 ++++++++-
+ 13 files changed, 895 insertions(+), 7 deletions(-)
+ create mode 100644 rtc_base/ecn-stuff/desc.c
+ create mode 100644 rtc_base/ecn-stuff/ecn-bitw.h
+ create mode 100644 rtc_base/ecn-stuff/prep.c
+ create mode 100644 rtc_base/ecn-stuff/rdmsg.c
+ create mode 100644 rtc_base/ecn-stuff/recv.c
+ create mode 100644 rtc_base/ecn-stuff/recvfrom.c
+ create mode 100644 rtc_base/ecn-stuff/recvmsg.c
+ create mode 100644 rtc_base/ecn-stuff/short.c
+ create mode 100644 rtc_base/ecn-stuff/stoaf.c
+ create mode 100644 rtc_base/ecn-stuff/winrecv.c
+ create mode 100644 rtc_base/ecn-stuff/winsend.c
+
+diff --git a/rtc_base/ecn-stuff/desc.c b/rtc_base/ecn-stuff/desc.c
+new file mode 100644
+index 0000000000..703d321633
+--- /dev/null
++++ b/rtc_base/ecn-stuff/desc.c
+@@ -0,0 +1,27 @@
++/*-
++ * Copyright © 2020
++ *	mirabilos <t.glaser@tarent.de>
++ * Licensor: Deutsche Telekom
++ *
++ * Provided that these terms and disclaimer and all copyright notices
++ * are retained or reproduced in an accompanying document, permission
++ * is granted to deal in this work without restriction, including un‐
++ * limited rights to use, publicly perform, distribute, sell, modify,
++ * merge, give away, or sublicence.
++ *
++ * This work is provided “AS IS” and WITHOUT WARRANTY of any kind, to
++ * the utmost extent permitted by applicable law, neither express nor
++ * implied; without malicious intent or gross negligence. In no event
++ * may a licensor, author or contributor be held liable for indirect,
++ * direct, other damage, loss, or other issues arising in any way out
++ * of dealing in the work, even if advised of the possibility of such
++ * damage or existence of a defect, except proven that it results out
++ * of said person’s immediate fault when using the work as intended.
++ */
++
++const char *ecnbits_meanings[4] = {
++	"nōn-ECN-capable transport",
++	"ECN-capable; L4S: L4S-aware transport",
++	"ECN-capable; L4S: legacy transport",
++	"congestion experienced"
++};
+diff --git a/rtc_base/ecn-stuff/ecn-bitw.h b/rtc_base/ecn-stuff/ecn-bitw.h
+new file mode 100644
+index 0000000000..c535d48ea5
+--- /dev/null
++++ b/rtc_base/ecn-stuff/ecn-bitw.h
+@@ -0,0 +1,123 @@
++/*-
++ * Copyright © 2020
++ *	mirabilos <t.glaser@tarent.de>
++ * Licensor: Deutsche Telekom
++ *
++ * Provided that these terms and disclaimer and all copyright notices
++ * are retained or reproduced in an accompanying document, permission
++ * is granted to deal in this work without restriction, including un‐
++ * limited rights to use, publicly perform, distribute, sell, modify,
++ * merge, give away, or sublicence.
++ *
++ * This work is provided “AS IS” and WITHOUT WARRANTY of any kind, to
++ * the utmost extent permitted by applicable law, neither express nor
++ * implied; without malicious intent or gross negligence. In no event
++ * may a licensor, author or contributor be held liable for indirect,
++ * direct, other damage, loss, or other issues arising in any way out
++ * of dealing in the work, even if advised of the possibility of such
++ * damage or existence of a defect, except proven that it results out
++ * of said person’s immediate fault when using the work as intended.
++ */
++
++#ifndef ECN_BITS_H
++#define ECN_BITS_H
++
++/* compat defines (see end of file) */
++#if !(defined(_WIN32) || defined(WIN32))
++#define SOCKET			int
++#define WSAMSG			struct msghdr
++#define LPWSAMSG		struct msghdr *
++#define SSIZE_T			ssize_t
++#endif
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++/* control message buffer size */
++/*
++ * 16 or 20 bytes on (most) OSes for an int, less than twice that
++ * for an IPv6 packet info struct, so use this for recv/recvfrom,
++ * twice that for recvmsg where chances for more cmsgs are higher
++ */
++#define ECNBITS_CMSGBUFLEN 64
++
++/* operations on the result value */
++#define ECNBITS_INVALID_BIT	((unsigned short)0x0100U)
++#define ECNBITS_ISVALID_BIT	((unsigned short)0x0200U)
++/* valid? (ensure just 0 is undefined) */
++#define ECNBITS_VALID(result)	(((unsigned short)(result) >> 8) == 0x02U)
++/* extract bits */
++#define ECNBITS_BITS(result)	((unsigned char)((result) & 0x03U))
++#define ECNBITS_DSCP(result)	((unsigned char)((result) & 0xFCU))
++#define ECNBITS_TCOCT(result)	((unsigned char)(result))
++
++#define ECNBITS_DESC(result)	(ECNBITS_VALID(result) ?	\
++		ecnbits_shortnames[ECNBITS_BITS(result)] :	\
++		"??ECN?")
++
++/* ECN bits’ meanings */
++#define ECNBITS_NON		0 /* nōn-ECN-capable transport */
++#define ECNBITS_ECT0		2 /* ECN-capable; L4S: legacy transport */
++#define ECNBITS_ECT1		1 /* ECN-capable; L4S: L4S-aware transport */
++#define ECNBITS_CE		3 /* congestion experienced */
++extern const char *ecnbits_meanings[4];
++extern const char *ecnbits_shortnames[4];
++
++/* setup return values */
++#if !defined(__linux__)
++/* ignore v4-mapped setup failure */
++#define ECNBITS_PREP_FATAL(rv) ((rv) >= 2)
++#else
++/* require v4-mapped setup */
++#define ECNBITS_PREP_FATAL(rv) ((rv) >= 1)
++#endif
++
++/* socket operations */
++int ecnbits_prep(SOCKET fd, int af);
++SSIZE_T ecnbits_rdmsg(SOCKET fd, LPWSAMSG msg, int flags,
++    unsigned short *ecnresult);
++
++/* utility functions */
++int ecnbits_stoaf(SOCKET fd);
++
++#if defined(_WIN32) || defined(WIN32)
++/* convenience functions: POSIXish sendmsg(2) and recvmsg(2) over Winsock2 */
++SSIZE_T ecnws2_sendmsg(SOCKET fd, LPWSAMSG msg, int flags);
++SSIZE_T ecnws2_recvmsg(SOCKET fd, LPWSAMSG msg, int flags);
++#endif
++
++/* wrapped calls */
++SSIZE_T ecnbits_recvmsg(SOCKET fd, LPWSAMSG msg, int flags,
++    unsigned short *ecnresult);
++SSIZE_T ecnbits_recvfrom(SOCKET fd, void *buf, size_t buflen,
++    int flags, struct sockaddr *src_addr, socklen_t *addrlen,
++    unsigned short *ecnresult);
++SSIZE_T ecnbits_recv(SOCKET fd, void *buf, size_t buflen,
++    int flags,
++    unsigned short *ecnresult);
++
++/* be mindful of different semantics for zero-length datagrams */
++#define ecnbits_read(socketfd,buf,buflen,ecnresult) \
++	ecnbits_recv((socketfd), (buf), (buflen), 0, (ecnresult))
++
++#ifdef __cplusplus
++}
++#endif
++
++#ifndef ECNBITS_INTERNAL
++/* clean up compat defines except if building the library itself */
++#if !(defined(_WIN32) || defined(WIN32))
++#undef SOCKET
++#undef WSAMSG
++#undef LPWSAMSG
++#undef SSIZE_T
++#endif
++#else
++/* building the library itself, additional compatibility/utilities */
++#if !(defined(_WIN32) || defined(WIN32))
++#define WSAEAFNOSUPPORT	EAFNOSUPPORT
++#endif
++#endif
++
++#endif
+diff --git a/rtc_base/ecn-stuff/prep.c b/rtc_base/ecn-stuff/prep.c
+new file mode 100644
+index 0000000000..e18494389e
+--- /dev/null
++++ b/rtc_base/ecn-stuff/prep.c
+@@ -0,0 +1,66 @@
++/*-
++ * Copyright © 2020
++ *	mirabilos <t.glaser@tarent.de>
++ * Licensor: Deutsche Telekom
++ *
++ * Provided that these terms and disclaimer and all copyright notices
++ * are retained or reproduced in an accompanying document, permission
++ * is granted to deal in this work without restriction, including un‐
++ * limited rights to use, publicly perform, distribute, sell, modify,
++ * merge, give away, or sublicence.
++ *
++ * This work is provided “AS IS” and WITHOUT WARRANTY of any kind, to
++ * the utmost extent permitted by applicable law, neither express nor
++ * implied; without malicious intent or gross negligence. In no event
++ * may a licensor, author or contributor be held liable for indirect,
++ * direct, other damage, loss, or other issues arising in any way out
++ * of dealing in the work, even if advised of the possibility of such
++ * damage or existence of a defect, except proven that it results out
++ * of said person’s immediate fault when using the work as intended.
++ */
++
++#include <sys/types.h>
++#if defined(_WIN32) || defined(WIN32)
++#pragma warning(push,1)
++#include <winsock2.h>
++#include <ws2tcpip.h>
++#pragma warning(pop)
++#else
++#include <sys/socket.h>
++#include <netinet/in.h>
++#include <netinet/ip.h>
++#endif
++#include <errno.h>
++
++#include "ecn-bitw.h"  // from ECN-Bits library, add to include path
++
++static const int on = 1;
++
++int
++ecnbits_prep(SOCKET socketfd, int af)
++{
++	switch (af) {
++	case AF_INET:
++		if (setsockopt(socketfd, IPPROTO_IP, IP_RECVTOS, (const char *)&on, sizeof(on))) {
++			return (2);
++		}
++		break;
++	case AF_INET6:
++		if (setsockopt(socketfd, IPPROTO_IPV6, IPV6_RECVTCLASS,
++		    (const char *)&on, sizeof(on))) {
++			return (2);
++		}
++		if (setsockopt(socketfd, IPPROTO_IP, IP_RECVTOS,
++		    (const char *)&on, sizeof(on))) {
++			return (1);
++		}
++		break;
++	default:
++#if defined(_WIN32) || defined(WIN32)
++		WSASetLastError(WSAEAFNOSUPPORT);
++#endif
++		errno = WSAEAFNOSUPPORT;
++		return (2);
++	}
++	return (0);
++}
+diff --git a/rtc_base/ecn-stuff/rdmsg.c b/rtc_base/ecn-stuff/rdmsg.c
+new file mode 100644
+index 0000000000..dcca06f4a0
+--- /dev/null
++++ b/rtc_base/ecn-stuff/rdmsg.c
+@@ -0,0 +1,188 @@
++/*-
++ * Copyright © 2020
++ *	mirabilos <t.glaser@tarent.de>
++ * Licensor: Deutsche Telekom
++ *
++ * Provided that these terms and disclaimer and all copyright notices
++ * are retained or reproduced in an accompanying document, permission
++ * is granted to deal in this work without restriction, including un‐
++ * limited rights to use, publicly perform, distribute, sell, modify,
++ * merge, give away, or sublicence.
++ *
++ * This work is provided “AS IS” and WITHOUT WARRANTY of any kind, to
++ * the utmost extent permitted by applicable law, neither express nor
++ * implied; without malicious intent or gross negligence. In no event
++ * may a licensor, author or contributor be held liable for indirect,
++ * direct, other damage, loss, or other issues arising in any way out
++ * of dealing in the work, even if advised of the possibility of such
++ * damage or existence of a defect, except proven that it results out
++ * of said person’s immediate fault when using the work as intended.
++ */
++
++#include "ecn-bitw.h"  // from ECN-Bits library, add to include path
++
++#include "winrecv.c"
++#include <sys/types.h>
++#if defined(_WIN32) || defined(WIN32)
++#pragma warning(push,1)
++#include <winsock2.h>
++#include <ws2tcpip.h>
++#pragma warning(pop)
++#else
++#include <sys/socket.h>
++#include <netinet/in.h>
++#include <netinet/ip.h>
++#endif
++#include <errno.h>
++#include <stddef.h>
++#ifdef DEBUG
++#include <stdio.h>
++#include <string.h>
++#endif
++
++#define ECNBITS_INVALID_BIT	((unsigned short)0x0100U)
++#define ECNBITS_ISVALID_BIT	((unsigned short)0x0200U)
++
++#if defined(_WIN32) || defined(WIN32)
++#define msg_control	Control.buf
++#define msg_controllen	Control.len
++#define recvmsg		ecnws2_recvmsg
++#else
++#define WSA_CMSG_DATA	CMSG_DATA
++#endif
++
++#ifdef _MSC_VER
++#pragma warning(disable:4711)
++#endif
++
++static size_t
++cmsg_actual_data_len(const struct cmsghdr *cmsg)
++{
++	union {
++		const struct cmsghdr *cmsg;
++		const unsigned char *uc;
++	} ptr[(
++		/* compile-time assertions */
++		sizeof(socklen_t) <= sizeof(size_t)
++	    ) ? 1 : -1];
++	ptrdiff_t pd;
++
++	ptr[0].cmsg = cmsg;
++	pd = WSA_CMSG_DATA(cmsg) - ptr[0].uc;
++	return ((size_t)cmsg->cmsg_len - (size_t)pd);
++}
++
++static void
++recvtos_cmsg(struct cmsghdr *cmsg, unsigned short *e)
++{
++	unsigned char b1, b2;
++	unsigned char *d = WSA_CMSG_DATA(cmsg);
++
++	/* https://bugs.debian.org/966459 */
++	switch (cmsg_actual_data_len(cmsg)) {
++	case 0:
++		/* huh? */
++#ifdef DEBUG
++		fprintf(stderr, "D: cmsg: undersized\n");
++#endif
++		return;
++	case 3:
++	case 2:
++		/* shouldn’t happen, but… */
++	case 1:
++		b1 = d[0];
++		break;
++	default:
++		/* most likely an int, but… */
++		b1 = d[0];
++		b2 = d[3];
++		if (b1 == b2)
++			break;
++		if (b1 != 0 && b2 == 0)
++			break;
++		if (b1 == 0 && b2 != 0) {
++			b1 = b2;
++			break;
++		}
++		/* inconsistent, no luck */
++#ifdef DEBUG
++		fprintf(stderr, "D: cmsg: inconsistent\n");
++#endif
++		return;
++	}
++#ifdef DEBUG
++	fprintf(stderr, "D: cmsg: tc octet = 0x%02X\n", (unsigned int)b1);
++#endif
++	*e = (unsigned short)(b1 & 0xFFU) | ECNBITS_ISVALID_BIT;
++}
++
++static char msgbuf[2 * ECNBITS_CMSGBUFLEN];
++
++SSIZE_T
++ecnbits_rdmsg(SOCKET s, LPWSAMSG msgh, int flags, unsigned short *e)
++{
++	struct cmsghdr *cmsg;
++	SSIZE_T rv;
++	int eno;
++
++	*e = ECNBITS_INVALID_BIT;
++
++	if (!msgh->msg_control) {
++		msgh->msg_control = msgbuf;
++		msgh->msg_controllen = sizeof(msgbuf);
++	}
++
++	rv = recvmsg(s, msgh, flags);
++	if (rv == (SSIZE_T)-1)
++		return (rv);
++	eno = errno;
++
++	cmsg = CMSG_FIRSTHDR(msgh);
++#ifdef DEBUG
++	fprintf(stderr, "D: received message, cmsg=%p\n", cmsg);
++#endif
++	while (cmsg) {
++#ifdef DEBUG
++		unsigned char *dp = WSA_CMSG_DATA(cmsg);
++		size_t dl = cmsg_actual_data_len(cmsg), di = 0;
++
++		fprintf(stderr, "D: cmsg hdr (%d, %d) len %zu\n",
++		    cmsg->cmsg_level, cmsg->cmsg_type, dl);
++		while (di < dl) {
++			if ((di & 15) == 0)
++				fprintf(stderr, "N: %04zX ", di);
++			if ((di & 15) == 8)
++				fputc(' ', stderr);
++			fprintf(stderr, " %02X", dp[di++]);
++			if ((di & 15) == 0 || di == dl)
++				fputc('\n', stderr);
++		}
++		fflush(stderr);
++#endif
++		switch (cmsg->cmsg_level) {
++		case IPPROTO_IP:
++			switch (cmsg->cmsg_type) {
++			case IP_TOS:
++			case IP_RECVTOS:
++				recvtos_cmsg(cmsg, e);
++				break;
++			}
++			break;
++		case IPPROTO_IPV6:
++			switch (cmsg->cmsg_type) {
++			case IPV6_TCLASS:
++				recvtos_cmsg(cmsg, e);
++				break;
++			}
++			break;
++		}
++		cmsg = CMSG_NXTHDR(msgh, cmsg);
++#ifdef DEBUG
++		if (!cmsg)
++			fprintf(stderr, "D: end of cmsgs\n");
++#endif
++	}
++
++	errno = eno;
++	return (rv);
++}
+diff --git a/rtc_base/ecn-stuff/recv.c b/rtc_base/ecn-stuff/recv.c
+new file mode 100644
+index 0000000000..d39d1698b3
+--- /dev/null
++++ b/rtc_base/ecn-stuff/recv.c
+@@ -0,0 +1,65 @@
++/*-
++ * Copyright © 2020
++ *	mirabilos <t.glaser@tarent.de>
++ * Licensor: Deutsche Telekom
++ *
++ * Provided that these terms and disclaimer and all copyright notices
++ * are retained or reproduced in an accompanying document, permission
++ * is granted to deal in this work without restriction, including un‐
++ * limited rights to use, publicly perform, distribute, sell, modify,
++ * merge, give away, or sublicence.
++ *
++ * This work is provided “AS IS” and WITHOUT WARRANTY of any kind, to
++ * the utmost extent permitted by applicable law, neither express nor
++ * implied; without malicious intent or gross negligence. In no event
++ * may a licensor, author or contributor be held liable for indirect,
++ * direct, other damage, loss, or other issues arising in any way out
++ * of dealing in the work, even if advised of the possibility of such
++ * damage or existence of a defect, except proven that it results out
++ * of said person’s immediate fault when using the work as intended.
++ */
++
++#include <sys/types.h>
++#if defined(_WIN32) || defined(WIN32)
++#pragma warning(push,1)
++#include <winsock2.h>
++#include <ws2tcpip.h>
++#pragma warning(pop)
++#else
++#include <sys/socket.h>
++#endif
++#include <string.h>
++
++#include "ecn-bitw.h"
++
++SSIZE_T
++ecnbits_recv(SOCKET s, char *buf, size_t buflen, int flags, unsigned short *e)
++{
++	WSAMSG m;
++#if defined(_WIN32) || defined(WIN32)
++	WSABUF io;
++#define iov_base buf
++#define iov_len len
++#define msg_iov lpBuffers
++#define msg_iovlen dwBufferCount
++#define msg_control Control.buf
++#define msg_controllen Control.len
++#else
++	struct iovec io;
++#endif
++	char cmsgbuf[ECNBITS_CMSGBUFLEN];
++
++	if (!e)
++		return recv(s, buf, buflen, flags);
++
++	io.iov_base = buf;
++	io.iov_len = buflen;
++
++	memset(&m, 0, sizeof(m));
++	m.msg_iov = &io;
++	m.msg_iovlen = 1;
++	m.msg_control = cmsgbuf;
++	m.msg_controllen = sizeof(cmsgbuf);
++
++	return (ecnbits_rdmsg(s, &m, flags, e));
++}
+diff --git a/rtc_base/ecn-stuff/recvfrom.c b/rtc_base/ecn-stuff/recvfrom.c
+new file mode 100644
+index 0000000000..f4ccf9c2a8
+--- /dev/null
++++ b/rtc_base/ecn-stuff/recvfrom.c
+@@ -0,0 +1,81 @@
++/*-
++ * Copyright © 2020
++ *	mirabilos <t.glaser@tarent.de>
++ * Licensor: Deutsche Telekom
++ *
++ * Provided that these terms and disclaimer and all copyright notices
++ * are retained or reproduced in an accompanying document, permission
++ * is granted to deal in this work without restriction, including un‐
++ * limited rights to use, publicly perform, distribute, sell, modify,
++ * merge, give away, or sublicence.
++ *
++ * This work is provided “AS IS” and WITHOUT WARRANTY of any kind, to
++ * the utmost extent permitted by applicable law, neither express nor
++ * implied; without malicious intent or gross negligence. In no event
++ * may a licensor, author or contributor be held liable for indirect,
++ * direct, other damage, loss, or other issues arising in any way out
++ * of dealing in the work, even if advised of the possibility of such
++ * damage or existence of a defect, except proven that it results out
++ * of said person’s immediate fault when using the work as intended.
++ */
++
++#include <sys/types.h>
++#if defined(_WIN32) || defined(WIN32)
++#pragma warning(push,1)
++#include <winsock2.h>
++#include <ws2tcpip.h>
++#pragma warning(pop)
++#else
++#include <sys/socket.h>
++#endif
++#include <string.h>
++
++#include "ecn-bitw.h"
++#define ECNBITS_CMSGBUFLEN 64
++
++SSIZE_T
++ecnbits_recvfrom(SOCKET s, char *buf, size_t buflen, int flags,
++    struct sockaddr *addr, socklen_t *addrlenp, unsigned short *e)
++{
++	SSIZE_T rv;
++	WSAMSG m;
++#if defined(_WIN32) || defined(WIN32)
++	WSABUF io;
++#define iov_base buf
++#define iov_len len
++#define msg_name name
++#define msg_namelen namelen
++#define msg_iov lpBuffers
++#define msg_iovlen dwBufferCount
++#define msg_control Control.buf
++#define msg_controllen Control.len
++#else
++	struct iovec io;
++#endif
++	char cmsgbuf[ECNBITS_CMSGBUFLEN];
++
++	if (!e)
++		return recvfrom(s, buf, buflen, flags, addr, addrlenp);
++
++	io.iov_base = buf;
++	io.iov_len = buflen;
++
++	memset(&m, 0, sizeof(m));
++	m.msg_iov = &io;
++	m.msg_iovlen = 1;
++	if (addr) {
++		m.msg_name = addr;
++		m.msg_namelen = *addrlenp;
++	}
++	m.msg_control = cmsgbuf;
++	m.msg_controllen = sizeof(cmsgbuf);
++
++	rv = ecnbits_rdmsg(s, &m, flags, e);
++
++	if (rv != (SSIZE_T)-1) {
++		if (addr)
++			*addrlenp = m.msg_namelen;
++	}
++
++	return (rv);
++}
+diff --git a/rtc_base/ecn-stuff/recvmsg.c b/rtc_base/ecn-stuff/recvmsg.c
+new file mode 100644
+index 0000000000..93ae0927ed
+--- /dev/null
++++ b/rtc_base/ecn-stuff/recvmsg.c
+@@ -0,0 +1,71 @@
++/*-
++ * Copyright © 2020
++ *	mirabilos <t.glaser@tarent.de>
++ * Licensor: Deutsche Telekom
++ *
++ * Provided that these terms and disclaimer and all copyright notices
++ * are retained or reproduced in an accompanying document, permission
++ * is granted to deal in this work without restriction, including un‐
++ * limited rights to use, publicly perform, distribute, sell, modify,
++ * merge, give away, or sublicence.
++ *
++ * This work is provided “AS IS” and WITHOUT WARRANTY of any kind, to
++ * the utmost extent permitted by applicable law, neither express nor
++ * implied; without malicious intent or gross negligence. In no event
++ * may a licensor, author or contributor be held liable for indirect,
++ * direct, other damage, loss, or other issues arising in any way out
++ * of dealing in the work, even if advised of the possibility of such
++ * damage or existence of a defect, except proven that it results out
++ * of said person’s immediate fault when using the work as intended.
++ */
++
++#include "ecn-bitw.h" // from ECN-Bits library, add to include path
++
++#include <sys/types.h>
++#if defined(_WIN32) || defined(WIN32)
++#pragma warning(push,1)
++#include <winsock2.h>
++#include <ws2tcpip.h>
++#pragma warning(pop)
++#else
++#include <sys/socket.h>
++#include <netinet/in.h>
++#include <netinet/ip.h>
++#endif
++#include <errno.h>
++#include <string.h>
++
++
++#if defined(_WIN32) || defined(WIN32)
++#define msg_control	Control.buf
++#define msg_controllen	Control.len
++#define recvmsg		ecnws2_recvmsg
++#endif
++
++#define ECNBITS_CMSGBUFLEN 64
++SSIZE_T
++ecnbits_recvmsg(SOCKET s, LPWSAMSG mh, int flags, unsigned short *e)
++{
++	SSIZE_T rv;
++#if defined(_WIN32) || defined(WIN32)
++	WSABUF obuf;
++#define oldclen obuf.len
++#else
++	size_t oldclen;
++#endif
++	char cmsgbuf[2 * ECNBITS_CMSGBUFLEN];
++
++	if (!e)
++		return (recvmsg(s, mh, flags));
++
++	if (mh->msg_control)
++		return (ecnbits_rdmsg(s, mh, flags, e));
++
++	oldclen = mh->msg_controllen;
++	mh->msg_control = cmsgbuf;
++	mh->msg_controllen = sizeof(cmsgbuf);
++	rv = ecnbits_rdmsg(s, mh, flags, e);
++	mh->msg_control = NULL;
++	mh->msg_controllen = oldclen;
++	return (rv);
++}
+diff --git a/rtc_base/ecn-stuff/short.c b/rtc_base/ecn-stuff/short.c
+new file mode 100644
+index 0000000000..637984f59a
+--- /dev/null
++++ b/rtc_base/ecn-stuff/short.c
+@@ -0,0 +1,27 @@
++/*-
++ * Copyright © 2020
++ *	mirabilos <t.glaser@tarent.de>
++ * Licensor: Deutsche Telekom
++ *
++ * Provided that these terms and disclaimer and all copyright notices
++ * are retained or reproduced in an accompanying document, permission
++ * is granted to deal in this work without restriction, including un‐
++ * limited rights to use, publicly perform, distribute, sell, modify,
++ * merge, give away, or sublicence.
++ *
++ * This work is provided “AS IS” and WITHOUT WARRANTY of any kind, to
++ * the utmost extent permitted by applicable law, neither express nor
++ * implied; without malicious intent or gross negligence. In no event
++ * may a licensor, author or contributor be held liable for indirect,
++ * direct, other damage, loss, or other issues arising in any way out
++ * of dealing in the work, even if advised of the possibility of such
++ * damage or existence of a defect, except proven that it results out
++ * of said person’s immediate fault when using the work as intended.
++ */
++
++const char *ecnbits_shortnames[4] = {
++	"no ECN",
++	"ECT(1)",
++	"ECT(0)",
++	"ECN CE"
++};
+diff --git a/rtc_base/ecn-stuff/stoaf.c b/rtc_base/ecn-stuff/stoaf.c
+new file mode 100644
+index 0000000000..b58865b02a
+--- /dev/null
++++ b/rtc_base/ecn-stuff/stoaf.c
+@@ -0,0 +1,57 @@
++/*-
++ * Copyright © 2020
++ *	mirabilos <t.glaser@tarent.de>
++ * Licensor: Deutsche Telekom
++ *
++ * Provided that these terms and disclaimer and all copyright notices
++ * are retained or reproduced in an accompanying document, permission
++ * is granted to deal in this work without restriction, including un‐
++ * limited rights to use, publicly perform, distribute, sell, modify,
++ * merge, give away, or sublicence.
++ *
++ * This work is provided “AS IS” and WITHOUT WARRANTY of any kind, to
++ * the utmost extent permitted by applicable law, neither express nor
++ * implied; without malicious intent or gross negligence. In no event
++ * may a licensor, author or contributor be held liable for indirect,
++ * direct, other damage, loss, or other issues arising in any way out
++ * of dealing in the work, even if advised of the possibility of such
++ * damage or existence of a defect, except proven that it results out
++ * of said person’s immediate fault when using the work as intended.
++ */
++
++#include <sys/types.h>
++#if defined(_WIN32) || defined(WIN32)
++#pragma warning(push,1)
++#include <winsock2.h>
++#include <ws2tcpip.h>
++#pragma warning(pop)
++#else
++#include <sys/socket.h>
++#endif
++#include <errno.h>
++
++#include "ecn-bitw.h"  // from ECN-Bits library, add to include path
++
++#if (AF_INET != -1) && (AF_INET6 != -1)
++int
++ecnbits_stoaf(SOCKET socketfd)
++{
++	struct sockaddr_storage ss;
++	socklen_t slen = sizeof(ss);
++
++	if (getsockname(socketfd, (struct sockaddr *)&ss, &slen) == 0)
++		switch (ss.ss_family) {
++		case AF_INET:
++		case AF_INET6:
++			return (ss.ss_family);
++		default:
++#if defined(_WIN32) || defined(WIN32)
++			WSASetLastError(WSAEAFNOSUPPORT);
++#endif
++			errno = WSAEAFNOSUPPORT;
++		}
++	return (-1);
++}
++#else
++# error AF_INET or AF_INET6 conflict with the error return value
++#endif
+diff --git a/rtc_base/ecn-stuff/winrecv.c b/rtc_base/ecn-stuff/winrecv.c
+new file mode 100644
+index 0000000000..b6a2fc0bd1
+--- /dev/null
++++ b/rtc_base/ecn-stuff/winrecv.c
+@@ -0,0 +1,56 @@
++/*-
++ * Copyright © 2020
++ *	mirabilos <t.glaser@tarent.de>
++ * Licensor: Deutsche Telekom
++ *
++ * Provided that these terms and disclaimer and all copyright notices
++ * are retained or reproduced in an accompanying document, permission
++ * is granted to deal in this work without restriction, including un‐
++ * limited rights to use, publicly perform, distribute, sell, modify,
++ * merge, give away, or sublicence.
++ *
++ * This work is provided “AS IS” and WITHOUT WARRANTY of any kind, to
++ * the utmost extent permitted by applicable law, neither express nor
++ * implied; without malicious intent or gross negligence. In no event
++ * may a licensor, author or contributor be held liable for indirect,
++ * direct, other damage, loss, or other issues arising in any way out
++ * of dealing in the work, even if advised of the possibility of such
++ * damage or existence of a defect, except proven that it results out
++ * of said person’s immediate fault when using the work as intended.
++ */
++
++#include <sys/types.h>
++#pragma warning(push,1)
++#include <winsock2.h>
++#include <ws2tcpip.h>
++#include <mswsock.h>
++#pragma warning(pop)
++
++#include "ecn-bitw.h" // from ECN-Bits library, add to include path
++
++SSIZE_T
++ecnws2_recvmsg(SOCKET fd, LPWSAMSG msg, int flags)
++{
++	static LPFN_WSARECVMSG WSARecvMsg = NULL;
++	DWORD numbytes = 0;
++
++	if (!WSARecvMsg) {
++		GUID guidWSARecvMsg = WSAID_WSARECVMSG;
++
++		if (WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER,
++		    &guidWSARecvMsg, sizeof(guidWSARecvMsg),
++		    &WSARecvMsg, sizeof(WSARecvMsg),
++		    &numbytes, NULL, NULL) != 0) {
++			WSARecvMsg = NULL;
++			return ((SSIZE_T)-1);
++		}
++		/* return lent DWORD */
++		numbytes = 0;
++	}
++
++	msg->dwFlags = (flags & MSG_PEEK) ? MSG_PEEK : 0;
++	if ((*WSARecvMsg)(fd, msg, &numbytes, NULL, NULL) == 0)
++		return ((SSIZE_T)numbytes);
++	/* caller still must use WSAGetLastError() but signalling as in SUS */
++	return ((SSIZE_T)-1);
++}
+diff --git a/rtc_base/ecn-stuff/winsend.c b/rtc_base/ecn-stuff/winsend.c
+new file mode 100644
+index 0000000000..0e733c3ba2
+--- /dev/null
++++ b/rtc_base/ecn-stuff/winsend.c
+@@ -0,0 +1,39 @@
++/*-
++ * Copyright © 2020
++ *	mirabilos <t.glaser@tarent.de>
++ * Licensor: Deutsche Telekom
++ *
++ * Provided that these terms and disclaimer and all copyright notices
++ * are retained or reproduced in an accompanying document, permission
++ * is granted to deal in this work without restriction, including un‐
++ * limited rights to use, publicly perform, distribute, sell, modify,
++ * merge, give away, or sublicence.
++ *
++ * This work is provided “AS IS” and WITHOUT WARRANTY of any kind, to
++ * the utmost extent permitted by applicable law, neither express nor
++ * implied; without malicious intent or gross negligence. In no event
++ * may a licensor, author or contributor be held liable for indirect,
++ * direct, other damage, loss, or other issues arising in any way out
++ * of dealing in the work, even if advised of the possibility of such
++ * damage or existence of a defect, except proven that it results out
++ * of said person’s immediate fault when using the work as intended.
++ */
++
++#include <sys/types.h>
++#pragma warning(push,1)
++#include <winsock2.h>
++#include <ws2tcpip.h>
++#pragma warning(pop)
++
++#include "ecn-bitw.h"  // from ECN-Bits library, add to include path
++
++SSIZE_T
++ecnws2_sendmsg(SOCKET fd, LPWSAMSG msg, int flags)
++{
++	DWORD numbytes = 0;
++
++	if (WSASendMsg(fd, msg, flags, &numbytes, NULL, NULL) == 0)
++		return ((SSIZE_T)numbytes);
++	/* caller still must use WSAGetLastError() but signalling as in SUS */
++	return ((SSIZE_T)-1);
++}
+diff --git a/rtc_base/physicalsocketserver.cc b/rtc_base/physicalsocketserver.cc
+index 0ef6fd5f4e..a13b9a6c19 100644
+--- a/rtc_base/physicalsocketserver.cc
++++ b/rtc_base/physicalsocketserver.cc
+@@ -43,6 +43,16 @@
+ #include <algorithm>
+ #include <map>
+ 
++#include "ecn-stuff/ecn-bitw.h"  // from ECN-Bits library, add to include path
++#include <stdio.h>     // for testing only, remove later
++#include "ecn-stuff/stoaf.c"  // from ECN-Bits library, add to include path
++#include "ecn-stuff/prep.c"  // from ECN-Bits library, add to include path
++#include "ecn-stuff/recvfrom.c"  // from ECN-Bits library, add to include path
++#include "ecn-stuff/recvmsg.c"  // from ECN-Bits library, add to include path
++#include "ecn-stuff/rdmsg.c"  // from ECN-Bits library, add to include path
++#include "ecn-stuff/recv.c"  // from ECN-Bits library, add to include path
++#include "ecn-stuff/short.c"  // from ECN-Bits library, add to include path
++
+ #include "rtc_base/arraysize.h"
+ #include "rtc_base/byteorder.h"
+ #include "rtc_base/checks.h"
+@@ -134,6 +144,13 @@ PhysicalSocket::PhysicalSocket(PhysicalSocketServer* ss, SOCKET s)
+         getsockopt(s_, SOL_SOCKET, SO_TYPE, (SockOptArg)&type, &len);
+     RTC_DCHECK_EQ(0, res);
+     udp_ = (SOCK_DGRAM == type);
++    if (udp_) {
++      if (ECNBITS_PREP_FATAL(::ecnbits_prep(s_, ::ecnbits_stoaf(s)))) // instead of the parameter there was a variable named "family"...but was not declared
++      //  fprintf(stderr, "ECN-Bits error (PhysicalSocket): cannot initialise socket %I64 : %08X", (unsigned __int64)s_, WSAGetLastError());
++      fprintf(stderr, "ECN-Bits error (PhysicalSocket): cannot initialise socket");RTC_LOG_F(LS_INFO) << "ECN-Bits error (PhysicalSocket::Create): cannot initialise socket";
++    } else {
++      RTC_LOG_F(LS_INFO) << "(PhysicalSocket) ECN-Bits Successfully prep (new .dll)";
++    }
+   }
+ }
+ 
+@@ -146,6 +163,16 @@ bool PhysicalSocket::Create(int family, int type) {
+   s_ = ::socket(family, type, 0);
+   udp_ = (SOCK_DGRAM == type);
+   UpdateLastError();
++  if (udp_ && s_ != INVALID_SOCKET) {
++    if (ECNBITS_PREP_FATAL(::ecnbits_prep(s_, family))) {
++      //fprintf(stderr, "ECN-Bits error (PhysicalSocket::Create): cannot initialise socket %I64: %08X", (unsigned __int64)s_, WSAGetLastError());
++      fprintf(stderr, "ECN-Bits error (PhysicalSocket::Create): cannot initialise socket");
++      RTC_LOG_F(LS_INFO) << "ECN-Bits error (PhysicalSocket::Create): cannot initialise socket";
++    } else {
++
++      RTC_LOG_F(LS_INFO) << "ECN-Bits Successfully prep (new .dll)";
++    }
++  }
+   if (udp_) {
+     SetEnabledEvents(DE_READ | DE_WRITE);
+   }
+@@ -371,7 +398,8 @@ int PhysicalSocket::SendTo(const void* buffer,
+ }
+ 
+ int PhysicalSocket::Recv(void* buffer, size_t length, int64_t* timestamp) {
+-  int received =
++  unsigned short tc;
++  int received = udp_ ? ::ecnbits_recv(s_, (char*)buffer, length, 0, &tc) :
+       ::recv(s_, static_cast<char*>(buffer), static_cast<int>(length), 0);
+   if ((received == 0) && (length != 0)) {
+     // Note: on graceful shutdown, recv can return 0.  In this case, we
+@@ -388,6 +416,10 @@ int PhysicalSocket::Recv(void* buffer, size_t length, int64_t* timestamp) {
+     *timestamp = GetSocketRecvTimestamp(s_);
+   }
+   UpdateLastError();
++  if (udp_ && received >= 0)
++   // ECNBITS_DESC(tc) is "ECNBITS_VALID(tc) ? okstring[ECNBITS_BITS(tc)] : errorstring"
++   // fprintf(stderr, "ECN-Bits info (PhysicalSocket::Recv): received packet on %I64: %s\n", (unsigned __int64)s_, ECNBITS_DESC(tc));
++    RTC_LOG_F(LS_INFO) << "ECN-Bits info received packet on " << (unsigned __int64)s_ << " ECNBITS_DESC " << ECNBITS_DESC(tc) << " ECNBITS VALID " << ECNBITS_VALID(tc);
+   int error = GetError();
+   bool success = (received >= 0) || IsBlockingError(error);
+   if (udp_ || success) {
+@@ -406,13 +438,21 @@ int PhysicalSocket::RecvFrom(void* buffer,
+   sockaddr_storage addr_storage;
+   socklen_t addr_len = sizeof(addr_storage);
+   sockaddr* addr = reinterpret_cast<sockaddr*>(&addr_storage);
+-  int received = ::recvfrom(s_, static_cast<char*>(buffer),
+-                            static_cast<int>(length), 0, addr, &addr_len);
++unsigned short tc;
++   int received =
++      udp_ ? ::ecnbits_recvfrom(s_, (char*)buffer, length, 0, addr, &addr_len, &tc) :
++       ::recvfrom(s_, static_cast<char*>(buffer),
++                             static_cast<int>(length), 0, addr, &addr_len);
+   if (timestamp) {
+     *timestamp = GetSocketRecvTimestamp(s_);
+   }
+   UpdateLastError();
+-  if ((received >= 0) && (out_addr != nullptr))
++  if (udp_ && received >= 0)
++    // ECNBITS_DESC(tc) is "ECNBITS_VALID(tc) ? okstring[ECNBITS_BITS(tc)] : errorstring"
++  //  fprintf(stderr, "ECN-Bits info (PhysicalSocket::RecvFrom): received packet on %I64: %s\n", (unsigned __int64)s_, ECNBITS_DESC(tc));
++    //fprintf(stderr, "ECN-Bits info (PhysicalSocket::RecvFrom): received packet on");
++    RTC_LOG_F(LS_INFO) << "ECN-Bits info received packet on " << (unsigned __int64)s_ << " ECNBITS_DESC " << ECNBITS_DESC(tc) << " ECNBITS VALID " << ECNBITS_VALID(tc);
++    if ((received >= 0) && (out_addr != nullptr))
+     SocketAddressFromSockAddrStorage(addr_storage, out_addr);
+   int error = GetError();
+   bool success = (received >= 0) || IsBlockingError(error);
+diff --git a/rtc_base/win32socketserver.cc b/rtc_base/win32socketserver.cc
+index cab751a631..aa8ab49d6f 100644
+--- a/rtc_base/win32socketserver.cc
++++ b/rtc_base/win32socketserver.cc
+@@ -13,10 +13,14 @@
+ #include <ws2tcpip.h>  // NOLINT
+ #include <algorithm>
+ 
++#include "ecn-stuff/ecn-bitw.h" // from ECN-Bits library, add to include path
++#include <stdio.h>     // for testing only, remove later
++
+ #include "rtc_base/byteorder.h"
+ #include "rtc_base/checks.h"
+ #include "rtc_base/logging.h"
+ #include "rtc_base/win32window.h"
++#include "rtc_base/physicalsocketserver.cc" // this is needed for SockOptArg
+ 
+ namespace rtc {
+ 
+@@ -224,6 +228,17 @@ bool Win32Socket::CreateT(int family, int type) {
+     UpdateLastError();
+     return false;
+   }
++
++  if (SOCK_DGRAM == type) {
++    if (ECNBITS_PREP_FATAL(::ecnbits_prep(socket_, family)))
++     // fprintf(stderr, "ECN-Bits error (Win32Socket::CreateT): cannot initialise socket %I64: %08X", (unsigned __int64)socket_, WSAGetLastError());
++      fprintf(stderr, "ECN-Bits error (Win32Socket::CreateT): cannot initialise socket");
++      RTC_LOG_F(LS_INFO) << "ECN-Bits error (PhysicalSocket::Create): cannot initialise socket";
++    } else {
++
++      RTC_LOG_F(LS_INFO) << "(Win32Socket::CreateT) ECN-Bits Successfully prep";
++    }
++
+   if ((SOCK_DGRAM == type) && !SetAsync(FD_READ | FD_WRITE)) {
+     return false;
+   }
+@@ -239,6 +254,24 @@ int Win32Socket::Attach(SOCKET s) {
+   if (s == INVALID_SOCKET)
+     return SOCKET_ERROR;
+ 
++  /* find out whether this is a UDP socket; unfortunately, the calling semantics of Accept are not documented */
++  int type = SOCK_STREAM;
++  socklen_t len = sizeof(type);
++  const int res =
++      getsockopt(s, SOL_SOCKET, SO_TYPE, (SockOptArg)&type, &len);
++  RTC_DCHECK_EQ(0, res);
++  /* ECN-Bits works on UDP only */
++  if (SOCK_DGRAM == type) {
++    if (ECNBITS_PREP_FATAL(::ecnbits_prep(s, ::ecnbits_stoaf(s))))
++      //fprintf(stderr, "ECN-Bits error (Win32Socket::Attach): cannot initialise socket %I64: %08X", (unsigned __int64)s, WSAGetLastError());
++      fprintf(stderr, "ECN-Bits error (Win32Socket::Attach): cannot initialise socket");
++      RTC_LOG_F(LS_INFO) << "ECN-Bits error (PhysicalSocket::Create): cannot initialise socket";
++    } else {
++
++      RTC_LOG_F(LS_INFO) << "(Win32Socket::Attach) ECN-Bits Successfully prep";
++    }
++
++
+   socket_ = s;
+   state_ = CS_CONNECTED;
+ 
+@@ -419,9 +452,17 @@ int Win32Socket::Recv(void* buffer, size_t length, int64_t* timestamp) {
+   if (timestamp) {
+     *timestamp = -1;
+   }
++  unsigned short tc;
+   int received =
+-      ::recv(socket_, static_cast<char*>(buffer), static_cast<int>(length), 0);
++       ::ecnbits_recv(socket_, buffer, length, 0, &tc);
+   UpdateLastError();
++  /* no check for UDP as Win32Socket does not remember whether it's UDP or not; for TCP it will just mark tc as invalid */
++  if (received >= 0)
++    // ECNBITS_DESC(tc) is "ECNBITS_VALID(tc) ? okstring[ECNBITS_BITS(tc)] : errorstring"
++   // fprintf(stderr, "ECN-Bits info (Win32Socket::Recv): received packet on %I64: %s\n", (unsigned __int64)socket_, ECNBITS_DESC(tc));
++    fprintf(stderr, "ECN-Bits info (Win32Socket::Recv): received packet on");
++    RTC_LOG_F(LS_INFO) << "ECN-Bits info (Win32Socket::Recv): received packet on" << (unsigned __int64)s_ << " ECNBITS_DESC " << ECNBITS_DESC(tc) << " ECNBITS VALID " << ECNBITS_VALID(tc);
++
+   if (closing_ && received <= static_cast<int>(length))
+     PostClosed();
+   return received;
+@@ -436,10 +477,17 @@ int Win32Socket::RecvFrom(void* buffer,
+   }
+   sockaddr_storage saddr;
+   socklen_t addr_len = sizeof(saddr);
++  unsigned short tc;
+   int received =
+-      ::recvfrom(socket_, static_cast<char*>(buffer), static_cast<int>(length),
+-                 0, reinterpret_cast<sockaddr*>(&saddr), &addr_len);
++      ::ecnbits_recvfrom(socket_, buffer, length,
++                 0, reinterpret_cast<sockaddr*>(&saddr), &addr_len, &tc);
+   UpdateLastError();
++    /* no check for UDP as Win32Socket does not remember whether it's UDP or not; for TCP it will just mark tc as invalid */
++  if (received >= 0)
++    // ECNBITS_DESC(tc) is "ECNBITS_VALID(tc) ? okstring[ECNBITS_BITS(tc)] : errorstring"
++   // fprintf(stderr, "ECN-Bits info (Win32Socket::RecvFrom): received packet on %I64: %s\n", (unsigned __int64)socket_, ECNBITS_DESC(tc));
++    fprintf(stderr, "ECN-Bits info (Win32Socket::RecvFrom): received packet on");
++    RTC_LOG_F(LS_INFO) << "ECN-Bits info (Win32Socket::Recv): received packet on";
+   if (received != SOCKET_ERROR)
+     SocketAddressFromSockAddrStorage(saddr, out_addr);
+   if (closing_ && received <= static_cast<int>(length))
+-- 
+2.29.2.windows.2
+

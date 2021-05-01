@@ -70,8 +70,8 @@ int AsyncSocketAdapter::Recv(void* pv, size_t cb, int64_t* timestamp) {
 int AsyncSocketAdapter::RecvFrom(void* pv,
                                  size_t cb,
                                  SocketAddress* paddr,
-                                 int64_t* timestamp) {
-  return socket_->RecvFrom(pv, cb, paddr, timestamp);
+                                 int64_t* timestamp, unsigned short* tc) {
+  return socket_->RecvFrom(pv, cb, paddr, timestamp, tc);
 }
 
 int AsyncSocketAdapter::Listen(int backlog) {
