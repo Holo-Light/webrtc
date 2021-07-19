@@ -13,6 +13,7 @@
 
 #include <d3d11.h>
 #include <winrt/base.h>
+#include <optional>
 
 #include "api/video/video_frame_buffer.h"
 #include "rtc_base/refcountedobject.h"
@@ -31,7 +32,7 @@ class D3D11VideoFrameBuffer : public webrtc::VideoFrameBuffer {
  public:
   ~D3D11VideoFrameBuffer() override;
 
-  // KL: Used on client side. ToI420 would probably crash because it has no
+  // Used on client side. ToI420 would probably crash because it has no
   // buffers to copy to, since those are supplied from the outside. On the
   // client CPU download isn't needed as the texture is decoded on the GPU and
   // stays there.
@@ -45,16 +46,21 @@ class D3D11VideoFrameBuffer : public webrtc::VideoFrameBuffer {
       int height,
       DXGI_FORMAT format);
 
-  // KL: Used on server side. Supports calling ToI420 (i.e. downloading to CPU)
+  // Used on server side. Supports calling ToI420 (i.e. downloading to CPU)
   // because the encoder expects the data in this format.
   static rtc::scoped_refptr<D3D11VideoFrameBuffer> Create(
       ID3D11DeviceContext* context,
       ID3D11Texture2D* staging_texture,
       ID3D11Texture2D* rendered_image,
+      ID3D11Texture2D* staging_depth_texture,
+      ID3D11Texture2D* staging_depth_texture_array,
+      ID3D11Texture2D* rendered_depth_image,
       uint8_t* dst_y,
       uint8_t* dst_u,
       uint8_t* dst_v,
-      D3D11_TEXTURE2D_DESC rendered_image_desc);
+      D3D11_TEXTURE2D_DESC rendered_image_desc,
+      int32_t width,
+      int32_t height);
 
   webrtc::VideoFrameBuffer::Type type() const override;
 
@@ -84,23 +90,34 @@ class D3D11VideoFrameBuffer : public webrtc::VideoFrameBuffer {
   D3D11VideoFrameBuffer(ID3D11DeviceContext* context,
                         ID3D11Texture2D* staging_texture,
                         ID3D11Texture2D* rendered_image,
-                        // int width,
-                        // int height,
+                        ID3D11Texture2D* staging_depth_texture,
+                        ID3D11Texture2D* staging_depth_texture_array,
+                        ID3D11Texture2D* rendered_depth_image,
                         uint8_t* dst_y,
                         uint8_t* dst_u,
                         uint8_t* dst_v,
-                        D3D11_TEXTURE2D_DESC rendered_image_desc
-                        /*                        DXGI_FORMAT format*/);
+                        D3D11_TEXTURE2D_DESC rendered_image_desc,
+                        int32_t width,
+                        int32_t height);
 
  private:
+  bool DownloadColor();
+  void DownloadDepth();
+
   int width_;
   int height_;
 
   // This is only used in i420 conversion to download data from the GPU.
   winrt::com_ptr<ID3D11Texture2D> staging_texture_;
+  winrt::com_ptr<ID3D11Texture2D> staging_depth_texture_;
+
+  // This one is used as a workaround for CopySubresourceRegion not working with
+  // BIND_DEPTH_STENCIL textures.
+  winrt::com_ptr<ID3D11Texture2D> staging_depth_texture_array_;
 
   // This texture holds the actual contents
   winrt::com_ptr<ID3D11Texture2D> rendered_image_;
+  winrt::com_ptr<ID3D11Texture2D> rendered_depth_image_;
   winrt::com_ptr<ID3D11DeviceContext> context_;
   uint32_t subresource_index_ = 0;
 
@@ -110,7 +127,8 @@ class D3D11VideoFrameBuffer : public webrtc::VideoFrameBuffer {
   uint8_t* dst_u_;
   uint8_t* dst_v_;
 
-  DXGI_FORMAT texture_format_;
+  DXGI_FORMAT color_texture_format_;
+  std::optional<DXGI_FORMAT> depth_texture_format_;
   D3D11_TEXTURE2D_DESC rendered_image_desc_;
 };
 }  // namespace hlr

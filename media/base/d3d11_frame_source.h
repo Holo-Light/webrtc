@@ -24,11 +24,11 @@ namespace hlr {
         //so let's not forget this. We might need a thread checker like android or other impls.
         public:
         static rtc::scoped_refptr<D3D11VideoFrameSource>
-            Create(ID3D11Device* device, ID3D11DeviceContext* context, D3D11_TEXTURE2D_DESC* desc, rtc::Thread* signaling_thread);
+            Create(ID3D11Device* device, ID3D11DeviceContext* context, D3D11_TEXTURE2D_DESC* color_desc, D3D11_TEXTURE2D_DESC* depth_desc, rtc::Thread* signaling_thread);
 
         ~D3D11VideoFrameSource() override;
 
-        void OnFrameCaptured(ID3D11Texture2D* rendered_image, webrtc::XRTimestamp timestamp = webrtc::XRTimestamp());
+        void OnFrameCaptured(ID3D11Texture2D* rendered_image, ID3D11Texture2D* depth_image, webrtc::XRTimestamp timestamp);
 
         absl::optional<bool> needs_denoising() const override;
 
@@ -41,13 +41,14 @@ namespace hlr {
         void SetState(rtc::AdaptedVideoTrackSource::SourceState state);
 
         protected:
-        D3D11VideoFrameSource(ID3D11Device* device, ID3D11DeviceContext* context, D3D11_TEXTURE2D_DESC* desc, rtc::Thread* signaling_thread);
+        D3D11VideoFrameSource(ID3D11Device* device, ID3D11DeviceContext* context, D3D11_TEXTURE2D_DESC* color_desc, D3D11_TEXTURE2D_DESC* depth_desc, rtc::Thread* signaling_thread);
 
         private:
         winrt::com_ptr<ID3D11Texture2D> staging_texture_;
+        winrt::com_ptr<ID3D11Texture2D> depth_staging_texture_;
+        winrt::com_ptr<ID3D11Texture2D> depth_staging_texture_array_;
         winrt::com_ptr<ID3D11Device> device_;
         winrt::com_ptr<ID3D11DeviceContext> context_;
-        DXGI_FORMAT texture_format_;
         int width_;
         int height_;
 
